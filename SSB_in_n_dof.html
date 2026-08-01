@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>O(3) Symmetry Breaking & Goldstone Bosons</title>
     <!-- Load Plotly.js -->
-    <script src="[https://cdn.plot.ly/plotly-2.24.1.min.js](https://cdn.plot.ly/plotly-2.24.1.min.js)"></script>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -110,7 +110,7 @@
         const data = [];
         
         if (mu2 < 0) {
-            // Vacuum is a sphere: r = sqrt(-mu^2 / lam)
+            // Vacuum is a sphere: r = Math.sqrt(-mu^2 / lam)
             const r = Math.sqrt(-mu2 / lam);
             const sphereData = generateSphere(r);
             
@@ -176,7 +176,7 @@
             zaxis: { title: 'φ₃', range: [-4, 4] },
             aspectmode: 'cube'
         },
-        legend: { x: 0, y: 1 }
+        showlegend: false
     };
 
     let currentMu2 = -4.0;
