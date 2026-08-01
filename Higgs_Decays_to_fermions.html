@@ -130,6 +130,7 @@
         
         for (let m = 100; m <= 1000; m += 1) {
             x.push(m);
+            
             // Find bounding indices
             let upperIdx = dataTable.findIndex(d => d.m >= m);
             if (upperIdx === 0) upperIdx = 1; // edge case
@@ -145,6 +146,11 @@
 
             for (let key in series) {
                 let val = d1[key] + frac * (d2[key] - d1[key]);
+                
+                // CRITICAL FIX: Log scales cannot plot zero. 
+                // Set a tiny floor value so the line renders just off the bottom of the chart.
+                if (val <= 0) val = 1e-6; 
+                
                 series[key].push(val);
             }
         }
@@ -166,7 +172,7 @@
 
     const layout = {
         margin: { l: 60, r: 20, b: 50, t: 20 },
-        xaxis: { title: 'Higgs Mass (GeV)', range: [100, 1000], type: 'log', tickvals: [100, 125, 200, 300, 500, 1000] },
+        xaxis: { title: 'Higgs Mass (GeV)', range: [2, 3], type: 'log', tickvals: [100, 125, 200, 300, 500, 1000] },
         yaxis: { title: 'Branching Ratio', type: 'log', range: [-4, 0], tickvals: [0.0001, 0.001, 0.01, 0.1, 1] },
         showlegend: false,
         hovermode: 'x unified',
@@ -193,7 +199,7 @@
             <div class="val-ww">WW: ${(series.ww[idx]*100).toFixed(2)}%</div>
             <div class="val-zz">ZZ: ${(series.zz[idx]*100).toFixed(2)}%</div>
             <div class="val-tautau">ττ: ${(series.tautau[idx]*100).toFixed(2)}%</div>
-            <div class="val-tt">tt: ${(series.tt[idx]*100).toFixed(2)}%</div>
+            <div class="val-tt">tt: ${(series.tt[idx] < 1e-5 ? 0 : series.tt[idx]*100).toFixed(2)}%</div>
             <div class="val-gg">gg: ${(series.gg[idx]*100).toFixed(2)}%</div>
             <div class="val-yy">γγ: ${(series.yy[idx]*100).toFixed(3)}%</div>
         `;
