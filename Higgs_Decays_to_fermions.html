@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Higgs Boson Branching Ratios</title>
+    <!-- Load Plotly.js -->
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            max-width: 900px;
+            width: 100%;
+        }
+        h2 { text-align: center; margin-top: 0; }
+        .controls {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 10px;
+            padding: 15px;
+            background: #eef2f5;
+            border-radius: 8px;
+        }
+        .slider-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        label { font-weight: bold; width: 30%;}
+        input[type="range"] { width: 65%; }
+        
+        .readout {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            font-family: monospace;
+            font-size: 1.1em;
+            background: #fff;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .readout div { padding: 5px; border-radius: 3px; }
+        .val-bb { color: #d62728; font-weight: bold;}
+        .val-ww { color: #1f77b4; font-weight: bold;}
+        .val-zz { color: #2ca02c; font-weight: bold;}
+        .val-tt { color: #9467bd; font-weight: bold;}
+        .val-tautau { color: #ff7f0e; font-weight: bold;}
+        .val-gg { color: #8c564b; font-weight: bold;}
+        .val-yy { color: #e377c2; font-weight: bold;}
+        
+        #plot { width: 100%; height: 500px; }
+        .info {
+            font-size: 0.9em;
+            color: #555;
+            margin-top: 15px;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Standard Model Higgs Branching Ratios</h2>
+    
+    <div class="controls">
+        <div class="slider-row">
+            <label for="massSlider">Higgs Mass: <span id="massVal" style="color: #d9534f; font-size: 1.2em;">125</span> GeV</label>
+            <input type="range" id="massSlider" min="100" max="1000" step="1" value="125">
+        </div>
+        
+        <div class="readout" id="readout">
+            <!-- Values updated via JS -->
+        </div>
+    </div>
+    
+    <div id="plot"></div>
+    
+    <div class="info">
+        <strong>Kinematic Thresholds to observe:</strong><br>
+        - <strong>~125 GeV:</strong> The "sweet spot". The Higgs is light enough that the $b\bar{b}$ channel is dominant, but heavy enough that loop decays ($\gamma\gamma$, $gg$) and off-shell vector bosons ($WW^*$, $ZZ^*$) are highly visible.<br>
+        - <strong>~160 GeV:</strong> The $WW$ threshold ($2 M_W$). The branching ratio to $W$ bosons approaches 90%.<br>
+        - <strong>~350 GeV:</strong> The $t\bar{t}$ threshold ($2 m_t$). The top quark decay channel opens up, taking a significant share of the decays at very high masses.
+    </div>
+</div>
+
+<script>
+    // Approximate Theoretical Data for SM Higgs Branching Ratios
+    // Masses in GeV
+    const dataTable = [
+        {m: 100, bb: 0.812, ww: 0.010, zz: 0.001, tautau: 0.080, tt: 0.000, gg: 0.060, yy: 0.0015},
+        {m: 110, bb: 0.770, ww: 0.044, zz: 0.004, tautau: 0.077, tt: 0.000, gg: 0.067, yy: 0.0019},
+        {m: 120, bb: 0.678, ww: 0.132, zz: 0.015, tautau: 0.070, tt: 0.000, gg: 0.073, yy: 0.0022},
+        {m: 125, bb: 0.582, ww: 0.214, zz: 0.026, tautau: 0.063, tt: 0.000, gg: 0.081, yy: 0.0023}, // The Physical Higgs
+        {m: 130, bb: 0.496, ww: 0.301, zz: 0.040, tautau: 0.054, tt: 0.000, gg: 0.080, yy: 0.0022},
+        {m: 140, bb: 0.340, ww: 0.480, zz: 0.068, tautau: 0.035, tt: 0.000, gg: 0.054, yy: 0.0019},
+        {m: 150, bb: 0.170, ww: 0.680, zz: 0.082, tautau: 0.018, tt: 0.000, gg: 0.026, yy: 0.0014},
+        {m: 160, bb: 0.040, ww: 0.900, zz: 0.043, tautau: 0.004, tt: 0.000, gg: 0.006, yy: 0.0006},
+        {m: 170, bb: 0.008, ww: 0.960, zz: 0.023, tautau: 0.001, tt: 0.000, gg: 0.001, yy: 0.0002},
+        {m: 180, bb: 0.005, ww: 0.930, zz: 0.058, tautau: 0.001, tt: 0.000, gg: 0.001, yy: 0.0001},
+        {m: 200, bb: 0.002, ww: 0.730, zz: 0.260, tautau: 0.000, tt: 0.000, gg: 0.001, yy: 0.0000},
+        {m: 250, bb: 0.001, ww: 0.700, zz: 0.290, tautau: 0.000, tt: 0.000, gg: 0.001, yy: 0.0000},
+        {m: 300, bb: 0.001, ww: 0.680, zz: 0.310, tautau: 0.000, tt: 0.000, gg: 0.001, yy: 0.0000},
+        {m: 340, bb: 0.000, ww: 0.670, zz: 0.310, tautau: 0.000, tt: 0.000, gg: 0.001, yy: 0.0000},
+        {m: 350, bb: 0.000, ww: 0.650, zz: 0.300, tautau: 0.000, tt: 0.030, gg: 0.001, yy: 0.0000},
+        {m: 400, bb: 0.000, ww: 0.580, zz: 0.270, tautau: 0.000, tt: 0.140, gg: 0.001, yy: 0.0000},
+        {m: 500, bb: 0.000, ww: 0.540, zz: 0.250, tautau: 0.000, tt: 0.190, gg: 0.001, yy: 0.0000},
+        {m: 750, bb: 0.000, ww: 0.520, zz: 0.250, tautau: 0.000, tt: 0.200, gg: 0.001, yy: 0.0000},
+        {m: 1000, bb:0.000, ww: 0.510, zz: 0.250, tautau: 0.000, tt: 0.190, gg: 0.001, yy: 0.0000}
+    ];
+
+    // Helper: Interpolate data for smooth lines
+    function getInterpolatedData() {
+        let x = [];
+        let series = { bb: [], ww: [], zz: [], tautau: [], tt: [], gg: [], yy: [] };
+        
+        for (let m = 100; m <= 1000; m += 1) {
+            x.push(m);
+            // Find bounding indices
+            let upperIdx = dataTable.findIndex(d => d.m >= m);
+            if (upperIdx === 0) upperIdx = 1; // edge case
+            if (upperIdx === -1) upperIdx = dataTable.length - 1;
+            let lowerIdx = upperIdx - 1;
+            
+            let d1 = dataTable[lowerIdx];
+            let d2 = dataTable[upperIdx];
+            
+            // Linear interpolation
+            let frac = (m - d1.m) / (d2.m - d1.m);
+            if (d1.m === d2.m) frac = 0;
+
+            for (let key in series) {
+                let val = d1[key] + frac * (d2[key] - d1[key]);
+                series[key].push(val);
+            }
+        }
+        return {x, series};
+    }
+
+    const {x, series} = getInterpolatedData();
+
+    // Setup Plotly Traces
+    const traces = [
+        { x: x, y: series.bb, name: 'b b-bar', line: {color: '#d62728', width: 3} },
+        { x: x, y: series.ww, name: 'W⁺W⁻', line: {color: '#1f77b4', width: 3} },
+        { x: x, y: series.zz, name: 'ZZ', line: {color: '#2ca02c', width: 3} },
+        { x: x, y: series.tt, name: 't t-bar', line: {color: '#9467bd', width: 3} },
+        { x: x, y: series.tautau, name: 'τ⁺τ⁻', line: {color: '#ff7f0e', width: 2, dash: 'dash'} },
+        { x: x, y: series.gg, name: 'Gluons (gg)', line: {color: '#8c564b', width: 2, dash: 'dash'} },
+        { x: x, y: series.yy, name: 'γγ', line: {color: '#e377c2', width: 2, dash: 'dot'} }
+    ];
+
+    const layout = {
+        margin: { l: 60, r: 20, b: 50, t: 20 },
+        xaxis: { title: 'Higgs Mass (GeV)', range: [100, 1000], type: 'log', tickvals: [100, 125, 200, 300, 500, 1000] },
+        yaxis: { title: 'Branching Ratio', type: 'log', range: [-4, 0], tickvals: [0.0001, 0.001, 0.01, 0.1, 1] },
+        showlegend: false,
+        hovermode: 'x unified',
+        shapes: [
+            // Initial vertical line for the slider
+            { type: 'line', x0: 125, x1: 125, y0: 0.0001, y1: 1, line: { color: 'black', width: 2, dash: 'dot' } }
+        ]
+    };
+
+    Plotly.newPlot('plot', traces, layout, {responsive: true});
+
+    // Handle Slider Interactivity
+    const slider = document.getElementById('massSlider');
+    const massVal = document.getElementById('massVal');
+    const readout = document.getElementById('readout');
+
+    function updateReadout(mass) {
+        // Find exact or interpolated value
+        let idx = x.findIndex(val => val >= mass);
+        if (idx === -1) idx = x.length - 1;
+        
+        readout.innerHTML = `
+            <div class="val-bb">bb: ${(series.bb[idx]*100).toFixed(2)}%</div>
+            <div class="val-ww">WW: ${(series.ww[idx]*100).toFixed(2)}%</div>
+            <div class="val-zz">ZZ: ${(series.zz[idx]*100).toFixed(2)}%</div>
+            <div class="val-tautau">ττ: ${(series.tautau[idx]*100).toFixed(2)}%</div>
+            <div class="val-tt">tt: ${(series.tt[idx]*100).toFixed(2)}%</div>
+            <div class="val-gg">gg: ${(series.gg[idx]*100).toFixed(2)}%</div>
+            <div class="val-yy">γγ: ${(series.yy[idx]*100).toFixed(3)}%</div>
+        `;
+    }
+
+    slider.addEventListener('input', (e) => {
+        const mass = parseFloat(e.target.value);
+        massVal.textContent = mass;
+        
+        // Move the vertical line
+        layout.shapes[0].x0 = mass;
+        layout.shapes[0].x1 = mass;
+        Plotly.react('plot', traces, layout);
+        
+        updateReadout(mass);
+    });
+
+    // Initialize readout
+    updateReadout(125);
+
+</script>
+</body>
+</html>
