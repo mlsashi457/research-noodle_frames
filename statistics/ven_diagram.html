@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Higgs Decay Venn Diagram & Probability Simulator</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts: Outfit (modern sans-serif) & JetBrains Mono (for numbers/formulas) -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- MathJax for rendering gorgeous math equations -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #080c14;
+            color: #f3f4f6;
+        }
+        .font-mono-numbers {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbar for premium feel */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d1321;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f293d;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #374151;
+        }
+        /* Glowing neon shadows */
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(6, 182, 212, 0.3);
+        }
+        .glow-magenta {
+            box-shadow: 0 0 15px rgba(217, 70, 239, 0.3);
+        }
+        .glow-indigo {
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
+        }
+        .glass-panel {
+            background: rgba(22, 30, 49, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+    </style>
+</head>
+<body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto space-y-8">
+        
+        <!-- Header Card -->
+        <header class="glass-panel p-6 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-cyan-500 via-indigo-500 to-magenta-500"></div>
+            <div>
+                <div class="flex items-center gap-3">
+                    <span class="px-2.5 py-1 text-xs font-semibold uppercase tracking-wider rounded bg-cyan-950 text-cyan-400 border border-cyan-800">Quantum Physics</span>
+                    <span class="px-2.5 py-1 text-xs font-semibold uppercase tracking-wider rounded bg-purple-950 text-purple-400 border border-purple-800">Probability Theory</span>
+                </div>
+                <h1 class="text-3xl font-bold tracking-tight text-white mt-2">Higgs Boson Decay Channels</h1>
+                <p class="text-gray-400 mt-1 max-w-2xl">
+                    Visualizing events, overlapping sample spaces, and Venn diagram probabilities using Higgs decay modes: 
+                    <span class="text-cyan-400 font-medium">\(H \to \gamma\gamma\)</span> and 
+                    <span class="text-magenta-400 font-medium">\(H \to ZZ^*\)</span>.
+                </p>
+            </div>
+            
+            <!-- Quick Legend -->
+            <div class="flex flex-col sm:flex-row gap-4 bg-slate-900/60 p-4 rounded-2xl border border-slate-800/80">
+                <div class="flex items-center gap-2">
+                    <span class="w-3.5 h-3.5 rounded-full bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.6)]"></span>
+                    <span class="text-sm font-medium text-gray-200">Decay \(A\) (\(H \to \gamma\gamma\))</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3.5 h-3.5 rounded-full bg-magenta-500 shadow-[0_0_8px_rgba(217,70,239,0.6)]"></span>
+                    <span class="text-sm font-medium text-gray-200">Decay \(B\) (\(H \to ZZ^*\))</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-3.5 h-3.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span>
+                    <span class="text-sm font-medium text-gray-200">Intersection \(A \cap B\)</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Layout Grid -->
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <!-- Left Side: Interactive Venn Space (Canvas) -->
+            <section class="lg:col-span-7 space-y-6">
+                <div class="glass-panel p-6 rounded-3xl shadow-xl flex flex-col">
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-white">Sample Space \(S\)</h2>
+                            <p class="text-sm text-gray-400">Drag circles to change intersection. Radii represent event occurrence size.</p>
+                        </div>
+                        <span class="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-mono-numbers text-gray-400">
+                            Area(S) = <span id="areaSVal">400,000</span> px²
+                        </span>
+                    </div>
+
+                    <!-- Bounding Box Frame (Canvas Container) -->
+                    <div class="relative w-full aspect-[8/5] rounded-2xl bg-[#030712] border-2 border-slate-800 overflow-hidden shadow-inner group">
+                        <!-- Canvas overlay grid or labels if needed -->
+                        <canvas id="vennCanvas" width="800" height="500" class="w-full h-full block cursor-grab active:cursor-grabbing"></canvas>
+                        
+                        <!-- Mini tutorial overlay -->
+                        <div class="absolute bottom-3 left-3 bg-black/75 px-3 py-1.5 rounded-lg border border-slate-800 text-xs text-gray-400 pointer-events-none transition-opacity duration-300 group-hover:opacity-100 opacity-60">
+                            💡 Use sliders to resize. Drag circles with mouse/touch.
+                        </div>
+                    </div>
+                    
+                    <!-- Real-time Linear Probability Spectrum -->
+                    <div class="mt-6 space-y-2">
+                        <div class="flex justify-between text-xs text-gray-400 font-medium">
+                            <span>Probability Spectrum Map</span>
+                            <span class="font-mono-numbers">Total A ∪ B = <span id="spectrumAUBVal">0.0</span>%</span>
+                        </div>
+                        <div class="h-4 w-full bg-slate-950 rounded-full flex overflow-hidden border border-slate-800 p-0.5">
+                            <div id="barAOnly" class="h-full bg-cyan-500/80 transition-all duration-75" style="width: 0%"></div>
+                            <div id="barIntersect" class="h-full bg-indigo-500/80 transition-all duration-75" style="width: 0%"></div>
+                            <div id="barBOnly" class="h-full bg-magenta-500/80 transition-all duration-75" style="width: 0%"></div>
+                            <div id="barRemaining" class="h-full bg-slate-800/40 flex-1 transition-all duration-75"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-gray-500">
+                            <span>A \ B (Only \(\gamma\gamma\))</span>
+                            <span>A ∩ B (Both)</span>
+                            <span>B \ A (Only \(ZZ^*\))</span>
+                            <span>Remaining Space (Other Decays)</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Side: Calculations, Controls & Charts -->
+            <section class="lg:col-span-5 space-y-6">
+                
+                <!-- Controls Panel -->
+                <div class="glass-panel p-6 rounded-3xl shadow-xl space-y-5">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin='round' stroke-width='2' d='M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4'></path>
+                        </svg>
+                        Configuration Controls
+                    </h2>
+                    
+                    <!-- Radius Sliders -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="bg-slate-900/50 p-3 rounded-2xl border border-slate-800">
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-semibold text-cyan-400 uppercase tracking-wide">Radius \(r_A\)</label>
+                                <span class="text-sm font-mono-numbers text-cyan-300" id="radiusAValue">120 px</span>
+                            </div>
+                            <input type="range" id="radiusASlider" min="50" max="180" value="120" 
+                                   class="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-cyan-400 outline-none">
+                        </div>
+                        
+                        <div class="bg-slate-900/50 p-3 rounded-2xl border border-slate-800">
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-semibold text-magenta-400 uppercase tracking-wide">Radius \(r_B\)</label>
+                                <span class="text-sm font-mono-numbers text-magenta-300" id="radiusBValue">100 px</span>
+                            </div>
+                            <input type="range" id="radiusBSlider" min="50" max="180" value="100" 
+                                   class="w-full h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-magenta-400 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Physics Toggles -->
+                    <div class="space-y-3">
+                        <!-- Mutually Exclusive Toggle -->
+                        <div class="flex justify-between items-center p-3 rounded-2xl bg-slate-900/50 border border-slate-800">
+                            <div class="pr-4">
+                                <h3 class="text-sm font-semibold text-gray-200">Mutually Exclusive Events</h3>
+                                <p class="text-xs text-gray-500">Forces \(P(A \cap B) = 0\) by physically pushing circles apart.</p>
+                            </div>
+                            <button id="exclusiveToggle" class="w-12 h-6 flex items-center bg-slate-950 rounded-full p-1 cursor-pointer transition-colors duration-300 outline-none border border-slate-800">
+                                <div class="bg-slate-500 w-4 h-4 rounded-full shadow-md transform duration-300" id="exclusiveToggleThumb"></div>
+                            </button>
+                        </div>
+                        
+                        <!-- Secondary Visual Options -->
+                        <div class="flex gap-4">
+                            <label class="flex items-center gap-2 text-xs font-medium text-gray-400 cursor-pointer select-none">
+                                <input type="checkbox" id="gridCheckbox" checked class="rounded border-slate-800 bg-slate-950 text-indigo-500 focus:ring-0 focus:ring-offset-0 w-4 h-4">
+                                Show Grid
+                            </label>
+                            <label class="flex items-center gap-2 text-xs font-medium text-gray-400 cursor-pointer select-none">
+                                <input type="checkbox" id="vectorCheckbox" checked class="rounded border-slate-800 bg-slate-950 text-indigo-500 focus:ring-0 focus:ring-offset-0 w-4 h-4">
+                                Show Distance Vector
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Probability Calculations Panel -->
+                <div class="glass-panel p-6 rounded-3xl shadow-xl space-y-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                        <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin='round' stroke-width='2' d='M9 7h-3a2 2 0 00-2 2v9a2 2 0 002 2h9a2 2 0 002-2v-3m-1-4h-3m2 2l-3-3m3 3l3-3M12 21h.01M12 17h.01M12 13h.01M12 9h.01M8 17h.01M8 13h.01M8 9h.01M16 17h.01M16 13h.01M16 9h.01'></path>
+                        </svg>
+                        Real-time Theoretical Probabilities
+                    </h2>
+                    
+                    <!-- Values List -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- P(A) -->
+                        <div class="p-3 bg-cyan-950/20 border border-cyan-800/30 rounded-2xl flex flex-col justify-between">
+                            <span class="text-xs font-medium text-cyan-400 uppercase tracking-wider font-mono-numbers">P(A) = Area(A)/Area(S)</span>
+                            <span class="text-2xl font-bold text-cyan-300 font-mono-numbers mt-1" id="probAVal">0.00%</span>
+                            <span class="text-[10px] text-gray-500 mt-1">\(H \to \gamma\gamma\) (Di-photon)</span>
+                        </div>
+                        
+                        <!-- P(B) -->
+                        <div class="p-3 bg-magenta-950/20 border border-magenta-800/30 rounded-2xl flex flex-col justify-between">
+                            <span class="text-xs font-medium text-magenta-400 uppercase tracking-wider font-mono-numbers">P(B) = Area(B)/Area(S)</span>
+                            <span class="text-2xl font-bold text-magenta-300 font-mono-numbers mt-1" id="probBVal">0.00%</span>
+                            <span class="text-[10px] text-gray-500 mt-1">\(H \to ZZ^*\) (Four leptons)</span>
+                        </div>
+
+                        <!-- P(A ∩ B) -->
+                        <div class="p-3 bg-indigo-950/20 border border-indigo-800/30 rounded-2xl flex flex-col justify-between">
+                            <span class="text-xs font-medium text-indigo-400 uppercase tracking-wider font-mono-numbers">P(A ∩ B) = Overlap/Area(S)</span>
+                            <span class="text-2xl font-bold text-indigo-300 font-mono-numbers mt-1" id="probABVal">0.00%</span>
+                            <span class="text-[10px] text-gray-500 mt-1">Simultaneous / Shared decay</span>
+                        </div>
+
+                        <!-- P(A ∪ B) -->
+                        <div class="p-3 bg-slate-900/60 border border-slate-800 rounded-2xl flex flex-col justify-between">
+                            <span class="text-xs font-medium text-gray-300 uppercase tracking-wider font-mono-numbers">P(A ∪ B) = P(A)+P(B)-P(A∩B)</span>
+                            <span class="text-2xl font-bold text-white font-mono-numbers mt-1" id="probAUBVal">0.00%</span>
+                            <span class="text-[10px] text-gray-500 mt-1">Union (either decay channel)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Monte Carlo Event Simulator Panel -->
+                <div class="glass-panel p-6 rounded-3xl shadow-xl space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                            <svg class="w-5 h-5 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin='round' stroke-width='2' d='M13 10V3L4 14h7v7l9-11h-7z'></path>
+                            </svg>
+                            Monte Carlo Decay Simulator
+                        </h2>
+                        <span id="simStatusBadge" class="px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase bg-slate-950 text-gray-500 rounded border border-slate-800">
+                            Stopped
+                        </span>
+                    </div>
+
+                    <!-- Simulator Controls -->
+                    <div class="flex flex-wrap gap-2 items-center">
+                        <button id="simSingleBtn" class="flex-1 bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs py-2 px-3 rounded-xl border border-slate-700 transition active:scale-95 duration-100 flex items-center justify-center gap-1.5">
+                            ⚡ Single Event
+                        </button>
+                        <button id="simRainBtn" class="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-2 px-3 rounded-xl transition active:scale-95 duration-100 flex items-center justify-center gap-1.5">
+                            🌧️ Rain Decays
+                        </button>
+                        <button id="simResetBtn" class="bg-red-950 hover:bg-red-900 border border-red-800/50 text-red-300 font-semibold text-xs py-2 px-3 rounded-xl transition active:scale-95 duration-100 flex items-center justify-center gap-1.5">
+                            🗑️ Reset
+                        </button>
+                    </div>
+
+                    <!-- Rain speed control -->
+                    <div class="p-3 bg-slate-900/50 rounded-2xl border border-slate-800 flex justify-between items-center gap-4">
+                        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wide whitespace-nowrap">Rain Intensity</span>
+                        <input type="range" id="simIntensitySlider" min="1" max="100" value="20" 
+                               class="flex-1 h-1.5 bg-slate-950 rounded-lg appearance-none cursor-pointer accent-emerald-400 outline-none">
+                        <span class="text-xs font-mono-numbers text-emerald-400" id="intensityVal">20/fr</span>
+                    </div>
+
+                    <!-- Simulator Counters Grid -->
+                    <div class="grid grid-cols-5 gap-1.5 text-center bg-slate-950/80 p-3 rounded-2xl border border-slate-900/80">
+                        <div>
+                            <p class="text-[9px] font-semibold text-gray-500 uppercase tracking-wider">Total (\(N_S\))</p>
+                            <p class="text-sm font-bold text-gray-200 font-mono-numbers mt-1" id="countS">0</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] font-semibold text-cyan-500 uppercase tracking-wider">In A</p>
+                            <p class="text-sm font-bold text-cyan-400 font-mono-numbers mt-1" id="countA">0</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] font-semibold text-magenta-500 uppercase tracking-wider">In B</p>
+                            <p class="text-sm font-bold text-magenta-400 font-mono-numbers mt-1" id="countB">0</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] font-semibold text-indigo-500 uppercase tracking-wider">In A∩B</p>
+                            <p class="text-sm font-bold text-indigo-400 font-mono-numbers mt-1" id="countAB">0</p>
+                        </div>
+                        <div>
+                            <p class="text-[9px] font-semibold text-emerald-500 uppercase tracking-wider">In A∪B</p>
+                            <p class="text-sm font-bold text-emerald-400 font-mono-numbers mt-1" id="countAUB">0</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Live Comparison Chart Dashboard -->
+        <section class="glass-panel p-6 rounded-3xl shadow-xl space-y-4">
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin='round' stroke-width='2' d='M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z'></path>
+                </svg>
+                Dashboard: Geometric vs. Simulated Monte Carlo Probabilities
+            </h2>
+            <div class="relative h-[280px] w-full">
+                <canvas id="comparisonChart"></canvas>
+            </div>
+        </section>
+
+        <!-- Physics and Probability Background / Educational Info -->
+        <footer class="grid grid-cols-1 md:grid-cols-2 gap-8 glass-panel p-8 rounded-3xl shadow-xl">
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="p-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">1</span>
+                    Physics Context: Branching Fractions
+                </h3>
+                <div class="text-sm text-gray-300 space-y-3 leading-relaxed">
+                    <p>
+                        In particle physics, the <strong>branching ratio (or fraction)</strong> represents the probability that an unstable particle (like the Higgs Boson, \(H\)) decays into a specific final state.
+                    </p>
+                    <p>
+                        The Higgs boson is unstable and immediately decays into standard model particles through various channels. For example:
+                    </p>
+                    <ul class="list-disc list-inside space-y-1 pl-2 text-gray-400">
+                        <li><strong class="text-cyan-400">\(H \to \gamma\gamma\) (Di-photon channel):</strong> A clean experimental signal but rare (\(BR \approx 0.23\%\)). Used extensively in the 2012 discovery.</li>
+                        <li><strong class="text-magenta-400">\(H \to ZZ^* \to 4\ell\) (Four-lepton channel):</strong> The "Golden Channel" because of its extremely low background noise (\(BR \approx 0.012\%\) for \(4e/\mu\)).</li>
+                    </ul>
+                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-xs text-slate-400 italic">
+                        <strong>Physically Mutually Exclusive:</strong> A single Higgs Boson particle can only decay <em>once</em>. In any single decay event, it can decay to \(\gamma\gamma\) OR to \(ZZ^*\), but it is physically impossible to decay to BOTH simultaneously. Therefore, the physical decay events are disjoint: \(P(\gamma\gamma \cap ZZ^*) = 0\). Toggle "Mutually Exclusive" to simulate this physical reality!
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                    <span class="p-1 rounded bg-indigo-950 text-indigo-400 border border-indigo-800">2</span>
+                    Probability Math: The Addition Rule
+                </h3>
+                <div class="text-sm text-gray-300 space-y-3 leading-relaxed">
+                    <p>
+                        The <strong>Addition Rule</strong> states that for any two events \(A\) and \(B\) in a sample space \(S\), the probability of their union (either occurring) is:
+                        \[P(A \cup B) = P(A) + P(B) - P(A \cap B)\]
+                    </p>
+                    <p>
+                        If we do not subtract the intersection \(P(A \cap B)\), we would double-count events that lie in the overlap.
+                    </p>
+                    <h4 class="font-semibold text-white text-xs uppercase tracking-wide mt-2">Mutually Exclusive Events:</h4>
+                    <p>
+                        If \(A\) and \(B\) are mutually exclusive (disjoint), they cannot happen together, which means \(A \cap B = \emptyset\), and hence:
+                        \[P(A \cap B) = 0\]
+                        The addition rule then simplifies directly to:
+                        \[P(A \cup B) = P(A) + P(B)\]
+                    </p>
+                    <p>
+                        <strong>Monte Carlo Integration:</strong> The simulator generates random uniform points inside the box. By counting the ratio of points landing in a region to the total points (\(N_{\text{region}} / N_{\text{total}}\)), we obtain a statistical approximation of the areas. As \(N \to \infty\), the simulated probabilities converge exactly to the theoretical geometric ratios (Law of Large Numbers).
+                    </p>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        // Set up the canvas and drawing context
+        const canvas = document.getElementById('vennCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Circle definitions representing subsets A and B
+        // Coordinates and default sizes
+        const circleA = {
+            x: 280,
+            y: 250,
+            r: 120,
+            color: '#06b6d4',
+            glowColor: 'rgba(6, 182, 212, 0.4)',
+            fillColor: 'rgba(6, 182, 212, 0.12)',
+            label: 'H → γγ'
+        };
+
+        const circleB = {
+            x: 520,
+            y: 250,
+            r: 100,
+            color: '#d946ef',
+            glowColor: 'rgba(217, 70, 239, 0.4)',
+            fillColor: 'rgba(217, 70, 239, 0.12)',
+            label: 'H → ZZ*'
+        };
+
+        // State parameters
+        let isMutuallyExclusive = false;
+        let showGrid = true;
+        let showDistanceVector = true;
+
+        // Theoretical probabilities
+        let probA = 0;
+        let probB = 0;
+        let probAB = 0;
+        let probAUB = 0;
+
+        // Drag state variables
+        let activeDragCircle = null;
+        let dragOffset = { x: 0, y: 0 };
+
+        // Monte Carlo Simulation States
+        let isRaining = false;
+        let rainIntensity = 20; // Number of points generated per animation frame
+        let simCountTotal = 0;
+        let simCountA = 0;
+        let simCountB = 0;
+        let simCountAB = 0;
+        let simCountUnion = 0;
+        
+        // Array to store particle decay animations
+        let particles = [];
+        const maxPersistentParticles = 1200; // Cap on number of visible particles
+
+        // Chart.js Configuration
+        let comparisonChart = null;
+
+        // Initialize UI Elements
+        const radiusASlider = document.getElementById('radiusASlider');
+        const radiusBSlider = document.getElementById('radiusBSlider');
+        const radiusAValue = document.getElementById('radiusAValue');
+        const radiusBValue = document.getElementById('radiusBValue');
+        const exclusiveToggle = document.getElementById('exclusiveToggle');
+        const exclusiveToggleThumb = document.getElementById('exclusiveToggleThumb');
+        const gridCheckbox = document.getElementById('gridCheckbox');
+        const vectorCheckbox = document.getElementById('vectorCheckbox');
+
+        const probAValEl = document.getElementById('probAVal');
+        const probBValEl = document.getElementById('probBVal');
+        const probABValEl = document.getElementById('probABVal');
+        const probAUBValEl = document.getElementById('probAUBVal');
+
+        const countSEl = document.getElementById('countS');
+        const countAEl = document.getElementById('countA');
+        const countBEl = document.getElementById('countB');
+        const countABEl = document.getElementById('countAB');
+        const countAUBEl = document.getElementById('countAUB');
+
+        const simSingleBtn = document.getElementById('simSingleBtn');
+        const simRainBtn = document.getElementById('simRainBtn');
+        const simResetBtn = document.getElementById('simResetBtn');
+        const simIntensitySlider = document.getElementById('simIntensitySlider');
+        const intensityValEl = document.getElementById('intensityVal');
+        const simStatusBadge = document.getElementById('simStatusBadge');
+
+        const barAOnly = document.getElementById('barAOnly');
+        const barIntersect = document.getElementById('barIntersect');
+        const barBOnly = document.getElementById('barBOnly');
+        
+        // ----------------------------------------------------
+        // Chart.js Setup
+        // ----------------------------------------------------
+        function initComparisonChart() {
+            const chartCtx = document.getElementById('comparisonChart').getContext('2d');
+            comparisonChart = new Chart(chartCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['P(A) - Di-photon', 'P(B) - Four-lepton', 'P(A ∩ B) - Overlap', 'P(A ∪ B) - Union'],
+                    datasets: [
+                        {
+                            label: 'Geometric (Theoretical) %',
+                            data: [0, 0, 0, 0],
+                            backgroundColor: [
+                                'rgba(6, 182, 212, 0.75)',  // Cyan
+                                'rgba(217, 70, 239, 0.75)', // Magenta
+                                'rgba(99, 102, 241, 0.75)', // Indigo
+                                'rgba(243, 244, 246, 0.75)'  // White/Light Gray
+                            ],
+                            borderColor: [
+                                '#06b6d4',
+                                '#d946ef',
+                                '#6366f1',
+                                '#f3f4f6'
+                            ],
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        },
+                        {
+                            label: 'Monte Carlo (Simulated) %',
+                            data: [0, 0, 0, 0],
+                            backgroundColor: 'rgba(16, 185, 129, 0.75)', // Emerald
+                            borderColor: '#10b981',
+                            borderWidth: 1.5,
+                            borderRadius: 6
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: {
+                                color: '#9ca3af',
+                                font: { family: 'Outfit', size: 12 }
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: '#0f172a',
+                            titleFont: { family: 'Outfit', size: 13, weight: 'bold' },
+                            bodyFont: { family: 'JetBrains Mono', size: 12 },
+                            padding: 10,
+                            borderColor: 'rgba(255,255,255,0.08)',
+                            borderWidth: 1
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                color: '#9ca3af',
+                                font: { family: 'Outfit', size: 12 }
+                            },
+                            grid: { display: false }
+                        },
+                        y: {
+                            min: 0,
+                            max: 100,
+                            ticks: {
+                                color: '#9ca3af',
+                                font: { family: 'Outfit', size: 12 },
+                                callback: function(value) { return value + '%'; }
+                            },
+                            grid: {
+                                color: 'rgba(255, 255, 255, 0.05)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ----------------------------------------------------
+        // Exact Circle-Circle Intersection Geometry Formula
+        // ----------------------------------------------------
+        function getCircleIntersectionArea(r1, r2, d) {
+            // Case 1: No overlap
+            if (d >= r1 + r2) {
+                return 0;
+            }
+            // Case 2: One circle is fully inside the other
+            if (d <= Math.abs(r1 - r2)) {
+                return Math.PI * Math.min(r1, r2) * Math.min(r1, r2);
+            }
+            // Case 3: Partial overlap
+            const r1Sq = r1 * r1;
+            const r2Sq = r2 * r2;
+            const dSq = d * d;
+            
+            const part1 = r1Sq * Math.acos((dSq + r1Sq - r2Sq) / (2 * d * r1));
+            const part2 = r2Sq * Math.acos((dSq + r2Sq - r1Sq) / (2 * d * r2));
+            const part3 = 0.5 * Math.sqrt((-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2));
+            
+            return part1 + part2 - part3;
+        }
+
+        // ----------------------------------------------------
+        // Coordinate Scaling & Pointer Drag Handling
+        // ----------------------------------------------------
+        function getMousePos(e) {
+            const rect = canvas.getBoundingClientRect();
+            // Scale pointer coordinate to internal canvas logical size (800 x 500)
+            const x = (e.clientX - rect.left) * (canvas.width / rect.width);
+            const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+            return { x, y };
+        }
+
+        function onPointerDown(e) {
+            const pos = getMousePos(e);
+            const distA = Math.hypot(pos.x - circleA.x, pos.y - circleA.y);
+            const distB = Math.hypot(pos.x - circleB.x, pos.y - circleB.y);
+            
+            let hitA = distA < circleA.r;
+            let hitB = distB < circleB.r;
+            
+            if (hitA && hitB) {
+                // If clicked inside the intersection, drag the closer center
+                if (distA < distB) {
+                    activeDragCircle = circleA;
+                } else {
+                    activeDragCircle = circleB;
+                }
+            } else if (hitA) {
+                activeDragCircle = circleA;
+            } else if (hitB) {
+                activeDragCircle = circleB;
+            }
+            
+            if (activeDragCircle) {
+                canvas.setPointerCapture(e.pointerId);
+                dragOffset.x = pos.x - activeDragCircle.x;
+                dragOffset.y = pos.y - activeDragCircle.y;
+            }
+        }
+
+        function onPointerMove(e) {
+            const pos = getMousePos(e);
+            const distA = Math.hypot(pos.x - circleA.x, pos.y - circleA.y);
+            const distB = Math.hypot(pos.x - circleB.x, pos.y - circleB.y);
+            
+            // Cursor style indication
+            if (activeDragCircle) {
+                canvas.style.cursor = 'grabbing';
+            } else if (distA < circleA.r || distB < circleB.r) {
+                canvas.style.cursor = 'grab';
+            } else {
+                canvas.style.cursor = 'default';
+            }
+            
+            if (activeDragCircle) {
+                activeDragCircle.x = pos.x - dragOffset.x;
+                activeDragCircle.y = pos.y - dragOffset.y;
+                
+                resolvePhysics();
+                updateCalculations();
+            }
+        }
+
+        // Pointer up / release capture
+        function onPointerUp(e) {
+            if (activeDragCircle) {
+                canvas.releasePointerCapture(e.pointerId);
+                activeDragCircle = null;
+            }
+        }
+
+        // ----------------------------------------------------
+        // Physics Constraint Solver (Boundary and Collision)
+        // ----------------------------------------------------
+        function resolvePhysics() {
+            // Keep both circles inside bounding box S limits
+            keepInBounds(circleA);
+            keepInBounds(circleB);
+            
+            // Enforce mutual exclusivity pushing if active
+            if (isMutuallyExclusive) {
+                // Simple multi-iteration projection method to resolve overlap and boundaries
+                for (let iter = 0; iter < 6; iter++) {
+                    const dx = circleB.x - circleA.x;
+                    const dy = circleB.y - circleA.y;
+                    const dist = Math.hypot(dx, dy);
+                    const minDist = circleA.r + circleB.r;
+                    
+                    if (dist < minDist) {
+                        const overlap = minDist - dist;
+                        // Avoid division by zero if centers are identical
+                        const nx = dist > 0 ? dx / dist : 1;
+                        const ny = dist > 0 ? dy / dist : 0;
+                        
+                        // Push vectors (multiply by 1.02 to avoid floating point sticky micro-oscillations)
+                        const pushX = (overlap * 0.5) * nx * 1.02;
+                        const pushY = (overlap * 0.5) * ny * 1.02;
+                        
+                        if (activeDragCircle === circleA) {
+                            // Circle A is anchored by user's drag, push Circle B fully
+                            circleB.x += pushX * 2;
+                            circleB.y += pushY * 2;
+                        } else if (activeDragCircle === circleB) {
+                            // Circle B is anchored, push Circle A fully
+                            circleA.x -= pushX * 2;
+                            circleA.y -= pushY * 2;
+                        } else {
+                            // Neutral state (e.g., resizing slider), push both 50/50
+                            circleA.x -= pushX;
+                            circleA.y -= pushY;
+                            circleB.x += pushX;
+                            circleB.y += pushY;
+                        }
+                        
+                        // Keep within borders after pushing
+                        keepInBounds(circleA);
+                        keepInBounds(circleB);
+                    } else {
+                        break;
+                    }
+                }
+            }
+        }
+
+        function keepInBounds(circle) {
+            // Enforce that the circle boundaries stay within the canvas frame
+            circle.x = Math.max(circle.r, Math.min(canvas.width - circle.r, circle.x));
+            circle.y = Math.max(circle.r, Math.min(canvas.height - circle.r, circle.y));
+        }
+
+        // ----------------------------------------------------
+        // Real-Time Probability Calculations
+        // ----------------------------------------------------
+        function updateCalculations() {
+            const areaS = canvas.width * canvas.height; // 400,000 px²
+            const areaA = Math.PI * circleA.r * circleA.r;
+            const areaB = Math.PI * circleB.r * circleB.r;
+            
+            const dx = circleB.x - circleA.x;
+            const dy = circleB.y - circleA.y;
+            const d = Math.hypot(dx, dy);
+            
+            // Overlap area
+            const areaIntersect = isMutuallyExclusive ? 0 : getCircleIntersectionArea(circleA.r, circleB.r, d);
+            const areaUnion = areaA + areaB - areaIntersect;
+
+            // Compute probability values
+            probA = areaA / areaS;
+            probB = areaB / areaS;
+            probAB = areaIntersect / areaS;
+            probAUB = areaUnion / areaS;
+
+            // Update UI elements
+            probAValEl.innerText = (probA * 100).toFixed(2) + '%';
+            probBValEl.innerText = (probB * 100).toFixed(2) + '%';
+            probABValEl.innerText = (probAB * 100).toFixed(2) + '%';
+            probAUBValEl.innerText = (probAUB * 100).toFixed(2) + '%';
+
+            // Update spectrum bar
+            const pctAOnly = (probA - probAB) * 100;
+            const pctBOnly = (probB - probAB) * 100;
+            const pctAB = probAB * 100;
+
+            barAOnly.style.width = pctAOnly + '%';
+            barIntersect.style.width = pctAB + '%';
+            barBOnly.style.width = pctBOnly + '%';
+            
+            document.getElementById('spectrumAUBVal').innerText = (probAUB * 100).toFixed(1);
+
+            // Update Dashboard Chart
+            updateChartValues();
+        }
+
+        function updateChartValues() {
+            if (!comparisonChart) return;
+            
+            // Geometric data
+            const geoValues = [
+                probA * 100,
+                probB * 100,
+                probAB * 100,
+                probAUB * 100
+            ];
+            
+            // Monte Carlo Simulated data
+            const simValues = simCountTotal > 0 ? [
+                (simCountA / simCountTotal) * 100,
+                (simCountB / simCountTotal) * 100,
+                (simCountAB / simCountTotal) * 100,
+                (simCountUnion / simCountTotal) * 100
+            ] : [0, 0, 0, 0];
+            
+            comparisonChart.data.datasets[0].data = geoValues;
+            comparisonChart.data.datasets[1].data = simValues;
+            comparisonChart.update('none'); // Update without chart transition lag
+        }
+
+        // ----------------------------------------------------
+        // Canvas Rendering Routine
+        // ----------------------------------------------------
+        function drawCanvas() {
+            // Clear canvas with a solid background matching dark paneling
+            ctx.fillStyle = '#030712';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw grid background if checked
+            if (showGrid) {
+                ctx.strokeStyle = '#111827';
+                ctx.lineWidth = 1;
+                const gridSize = 40;
+                
+                for (let x = 0; x < canvas.width; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+                for (let y = 0; y < canvas.height; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+            }
+
+            // 2. Draw Monte Carlo simulated particle rain points
+            // Draw particles behind Venn borders so they appear inside the circles
+            for (let i = 0; i < particles.length; i++) {
+                const p = particles[i];
+                ctx.fillStyle = p.color;
+                
+                // If it's a new particle, make it slightly larger or give it a glow ring
+                if (p.life > 45) {
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = 1;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, 7 - (p.life - 45) * 0.8, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+                
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // 3. Draw Venn Sets Fill Areas
+            // Draw circle A fill
+            ctx.fillStyle = circleA.fillColor;
+            ctx.beginPath();
+            ctx.arc(circleA.x, circleA.y, circleA.r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw circle B fill
+            ctx.fillStyle = circleB.fillColor;
+            ctx.beginPath();
+            ctx.arc(circleB.x, circleB.y, circleB.r, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Draw intersection overlap region with a blending indigo layer (using clipping)
+            if (!isMutuallyExclusive) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(circleA.x, circleA.y, circleA.r, 0, Math.PI * 2);
+                ctx.clip(); // Restrict operations to Circle A interior
+
+                ctx.fillStyle = 'rgba(99, 102, 241, 0.28)'; // Indigo tint
+                ctx.beginPath();
+                ctx.arc(circleB.x, circleB.y, circleB.r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+
+            // 4. Draw Venn Border Outlines (Neon glows)
+            // Circle A Outline
+            ctx.save();
+            ctx.strokeStyle = circleA.color;
+            ctx.shadowColor = circleA.color;
+            ctx.shadowBlur = 10;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(circleA.x, circleA.y, circleA.r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            // Circle B Outline
+            ctx.save();
+            ctx.strokeStyle = circleB.color;
+            ctx.shadowColor = circleB.color;
+            ctx.shadowBlur = 10;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(circleB.x, circleB.y, circleB.r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+
+            // 5. Draw Distance Vector if enabled
+            const dx = circleB.x - circleA.x;
+            const dy = circleB.y - circleA.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (showDistanceVector && !isMutuallyExclusive) {
+                ctx.strokeStyle = 'rgba(156, 163, 175, 0.45)'; // grey dashed line
+                ctx.lineWidth = 1.5;
+                ctx.setLineDash([4, 4]);
+                ctx.beginPath();
+                ctx.moveTo(circleA.x, circleA.y);
+                ctx.lineTo(circleB.x, circleB.y);
+                ctx.stroke();
+                ctx.setLineDash([]); // Reset line dash
+
+                // Center node dots
+                ctx.fillStyle = '#06b6d4';
+                ctx.beginPath();
+                ctx.arc(circleA.x, circleA.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#d946ef';
+                ctx.beginPath();
+                ctx.arc(circleB.x, circleB.y, 4, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw distance text in center
+                const midX = (circleA.x + circleB.x) / 2;
+                const midY = (circleA.y + circleB.y) / 2;
+                
+                ctx.fillStyle = '#9ca3af';
+                ctx.font = '11px JetBrains Mono';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.fillText(`d = ${dist.toFixed(0)} px`, midX, midY - 6);
+            }
+
+            // 6. Draw Circle Labels (Subsets text tags)
+            ctx.font = 'bold 15px Outfit';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            
+            // Set A Text
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(circleA.label, circleA.x, circleA.y - 12);
+            ctx.font = '11px JetBrains Mono';
+            ctx.fillStyle = '#22d3ee';
+            ctx.fillText(`P(A) = ${(probA * 100).toFixed(1)}%`, circleA.x, circleA.y + 12);
+
+            // Set B Text
+            ctx.font = 'bold 15px Outfit';
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(circleB.label, circleB.x, circleB.y - 12);
+            ctx.font = '11px JetBrains Mono';
+            ctx.fillStyle = '#f472b6';
+            ctx.fillText(`P(B) = ${(probB * 100).toFixed(1)}%`, circleB.x, circleB.y + 12);
+        }
+
+        // ----------------------------------------------------
+        // Monte Carlo Simulation Engine
+        // ----------------------------------------------------
+        function addSimulatedDecays(count) {
+            for (let i = 0; i < count; i++) {
+                // Generate random uniform coordinates in S [800 x 500]
+                const px = Math.random() * canvas.width;
+                const py = Math.random() * canvas.height;
+
+                // Check hit test
+                const inA = Math.hypot(px - circleA.x, py - circleA.y) < circleA.r;
+                const inB = Math.hypot(px - circleB.x, py - circleB.y) < circleB.r;
+
+                // Determine classification and select visual color
+                let color = '#4b5563'; // background decays (neutral gray)
+                let size = 2;
+
+                if (inA && inB && !isMutuallyExclusive) {
+                    color = '#818cf8'; // intersection (glowing indigo)
+                    size = 3;
+                    simCountAB++;
+                    simCountA++;
+                    simCountB++;
+                    simCountUnion++;
+                } else if (inA) {
+                    color = '#22d3ee'; // only A (cyan)
+                    size = 2.5;
+                    simCountA++;
+                    simCountUnion++;
+                } else if (inB) {
+                    color = '#f472b6'; // only B (magenta)
+                    size = 2.5;
+                    simCountB++;
+                    simCountUnion++;
+                }
+
+                simCountTotal++;
+
+                // Add to visible particles array for rendering
+                particles.push({
+                    x: px,
+                    y: py,
+                    color: color,
+                    size: size,
+                    life: 60 // frames remaining for fade out
+                });
+            }
+
+            // Keep visible particles array capped to avoid memory bloating
+            if (particles.length > maxPersistentParticles) {
+                particles.splice(0, particles.length - maxPersistentParticles);
+            }
+
+            // Update DOM counters
+            countSEl.innerText = simCountTotal.toLocaleString();
+            countAEl.innerText = simCountA.toLocaleString();
+            countBEl.innerText = simCountB.toLocaleString();
+            countABEl.innerText = simCountAB.toLocaleString();
+            countAUBEl.innerText = simCountUnion.toLocaleString();
+
+            updateCalculations();
+        }
+
+        function resetSimulation() {
+            simCountTotal = 0;
+            simCountA = 0;
+            simCountB = 0;
+            simCountAB = 0;
+            simCountUnion = 0;
+            particles = [];
+
+            // Reset DOM counters
+            countSEl.innerText = '0';
+            countAEl.innerText = '0';
+            countBEl.innerText = '0';
+            countABEl.innerText = '0';
+            countAUBEl.innerText = '0';
+
+            // Stop continuous rain
+            if (isRaining) {
+                toggleRain();
+            }
+
+            updateCalculations();
+        }
+
+        function toggleRain() {
+            isRaining = !isRaining;
+            if (isRaining) {
+                simRainBtn.innerText = '⏸️ Pause Rain';
+                simRainBtn.className = 'flex-1 bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs py-2 px-3 rounded-xl transition active:scale-95 duration-100 flex items-center justify-center gap-1.5';
+                simStatusBadge.innerText = 'Raining';
+                simStatusBadge.className = 'px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase bg-emerald-950 text-emerald-400 rounded border border-emerald-800 animate-pulse';
+            } else {
+                simRainBtn.innerText = '🌧️ Rain Decays';
+                simRainBtn.className = 'flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs py-2 px-3 rounded-xl transition active:scale-95 duration-100 flex items-center justify-center gap-1.5';
+                simStatusBadge.innerText = 'Stopped';
+                simStatusBadge.className = 'px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase bg-slate-950 text-gray-500 rounded border border-slate-800';
+            }
+        }
+
+        // ----------------------------------------------------
+        // Event Listeners & Control Bindings
+        // ----------------------------------------------------
+        radiusASlider.addEventListener('input', (e) => {
+            circleA.r = parseInt(e.target.value);
+            radiusAValue.innerText = circleA.r + ' px';
+            resolvePhysics();
+            updateCalculations();
+        });
+
+        radiusBSlider.addEventListener('input', (e) => {
+            circleB.r = parseInt(e.target.value);
+            radiusBValue.innerText = circleB.r + ' px';
+            resolvePhysics();
+            updateCalculations();
+        });
+
+        exclusiveToggle.addEventListener('click', () => {
+            isMutuallyExclusive = !isMutuallyExclusive;
+            
+            if (isMutuallyExclusive) {
+                // Apply visual change to toggle button
+                exclusiveToggle.className = 'w-12 h-6 flex items-center bg-emerald-950 rounded-full p-1 cursor-pointer transition-colors duration-300 outline-none border border-emerald-800';
+                exclusiveToggleThumb.className = 'bg-emerald-400 w-4 h-4 rounded-full shadow-md transform translate-x-6 duration-300';
+            } else {
+                exclusiveToggle.className = 'w-12 h-6 flex items-center bg-slate-950 rounded-full p-1 cursor-pointer transition-colors duration-300 outline-none border border-slate-800';
+                exclusiveToggleThumb.className = 'bg-slate-500 w-4 h-4 rounded-full shadow-md transform translate-x-0 duration-300';
+            }
+
+            resolvePhysics();
+            updateCalculations();
+        });
+
+        gridCheckbox.addEventListener('change', (e) => {
+            showGrid = e.target.checked;
+        });
+
+        vectorCheckbox.addEventListener('change', (e) => {
+            showDistanceVector = e.target.checked;
+        });
+
+        simSingleBtn.addEventListener('click', () => {
+            addSimulatedDecays(1);
+        });
+
+        simRainBtn.addEventListener('click', toggleRain);
+        simResetBtn.addEventListener('click', resetSimulation);
+
+        simIntensitySlider.addEventListener('input', (e) => {
+            rainIntensity = parseInt(e.target.value);
+            intensityValEl.innerText = rainIntensity + '/fr';
+        });
+
+        // Touch and mouse pointer tracking
+        canvas.addEventListener('pointerdown', onPointerDown);
+        canvas.addEventListener('pointermove', onPointerMove);
+        canvas.addEventListener('pointerup', onPointerUp);
+        canvas.addEventListener('pointercancel', onPointerUp);
+
+        // ----------------------------------------------------
+        // Animation Loop
+        // ----------------------------------------------------
+        function animate() {
+            // Update decay events rain
+            if (isRaining) {
+                addSimulatedDecays(rainIntensity);
+            }
+
+            // Decrement particle visual lifetimes for fading animations
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].life--;
+            }
+            
+            // Draw frame
+            drawCanvas();
+
+            // Request next frame
+            requestAnimationFrame(animate);
+        }
+
+        // Initialize App
+        window.addEventListener('load', () => {
+            initComparisonChart();
+            updateCalculations();
+            animate();
+        });
+    </script>
+</body>
+</html>
