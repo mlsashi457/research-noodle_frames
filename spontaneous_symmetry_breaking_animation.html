@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Higgs Potential</title>
+    <!-- Load Plotly.js for 3D rendering -->
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+        h2 {
+            text-align: center;
+            margin-top: 0;
+        }
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #eef2f5;
+            border-radius: 8px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            width: 45%;
+        }
+        label {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        #plot {
+            width: 100%;
+            height: 600px;
+        }
+        .info {
+            font-size: 0.9em;
+            color: #555;
+            text-align: center;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Spontaneous Symmetry Breaking</h2>
+    <div class="controls">
+        <div class="control-group">
+            <label for="muSlider">Mass parameter, μ²: <span id="muVal" style="color: #d9534f;">-4.0</span></label>
+            <input type="range" id="muSlider" min="-10" max="10" step="0.1" value="-4.0">
+            <span class="info">Moves from unbroken (+μ²) to broken (-μ²) symmetry.</span>
+        </div>
+        <div class="control-group">
+            <label for="lamSlider">Self-coupling, λ: <span id="lamVal" style="color: #5bc0de;">1.0</span></label>
+            <input type="range" id="lamSlider" min="0.1" max="5.0" step="0.1" value="1.0">
+            <span class="info">Controls the steepness of the potential walls.</span>
+        </div>
+    </div>
+    
+    <div id="plot"></div>
+    <div class="info">
+        <strong>V(Φ) = μ²|Φ|² + λ|Φ|⁴</strong><br>
+        The red ring appears when μ² < 0, indicating the continuous degenerate vacuum states (the VEV).
+    </div>
+</div>
+
+<script>
+    // 1. Generate the grid coordinates (phi_1, phi_2)
+    const gridSize = 60;
+    const limit = 3.0;
+    const x = [];
+    const y = [];
+    
+    for (let i = 0; i < gridSize; i++) {
+        let val = -limit + (2 * limit * i) / (gridSize - 1);
+        x.push(val);
+        y.push(val);
+    }
+
+    // 2. Function to compute the Z values (Potential V) and the Minimum Ring
+    function getPlotData(mu2, lam) {
+        const z = [];
+        for (let j = 0; j < gridSize; j++) {
+            const row = [];
+            for (let i = 0; i < gridSize; i++) {
+                // |Phi|^2 = 1/2 * (phi_1^2 + phi_2^2)
+                let phi_sq = 0.5 * (x[i] * x[i] + y[j] * y[j]);
+                let v = mu2 * phi_sq + lam * phi_sq * phi_sq;
+                row.push(v);
+            }
+            z.push(row);
+        }
+
+        const surface = {
+            z: z,
+            x: x,
+            y: y,
+            type: 'surface',
+            colorscale: 'Viridis',
+            showscale: false,
+            contours: {
+                z: { show: true, usecolormap: true, highlightcolor: "limegreen", project: { z: true } }
+            }
+        };
+
+        // Calculate and plot the minimum ring if symmetry is broken (mu^2 < 0)
+        const ring = { x: [], y: [], z: [], type: 'scatter3d', mode: 'lines', line: { color: 'red', width: 6 }, name: 'Vacuum (VEV)', hoverinfo: 'none' };
+        
+        if (mu2 < 0) {
+            // VEV radius: |Phi|^2 = -mu^2 / (2*lam)  => 1/2 * r^2 = -mu^2 / (2*lam) => r = sqrt(-mu^2 / lam)
+            let r = Math.sqrt(-mu2 / lam);
+            // Minimum potential value: V_min = -mu^4 / (4*lam)
+            let z_min = -(mu2 * mu2) / (4.0 * lam);
+            
+            for (let t = 0; t <= Math.PI * 2.05; t += 0.1) {
+                ring.x.push(r * Math.cos(t));
+                ring.y.push(r * Math.sin(t));
+                ring.z.push(z_min + 0.5); // Lifted slightly to prevent clipping into the surface
+            }
+        }
+
+        return [surface, ring];
+    }
+
+    // 3. Define Plot Layout
+    const layout = {
+        margin: { l: 0, r: 0, b: 0, t: 0 },
+        scene: {
+            xaxis: { title: 'φ₁' },
+            yaxis: { title: 'φ₂' },
+            zaxis: { 
+                title: 'V(Φ)',
+                range: [-30, 40] // Keep the Z-axis fixed so the "hat" popping up is obvious
+            },
+            camera: {
+                eye: { x: 1.5, y: 1.5, z: 0.8 } // Default viewing angle
+            }
+        },
+        showlegend: false
+    };
+
+    // 4. Initialize Plot
+    let currentMu2 = -4.0;
+    let currentLam = 1.0;
+    Plotly.newPlot('plot', getPlotData(currentMu2, currentLam), layout, {responsive: true});
+
+    // 5. Setup Interactive Event Listeners
+    const muSlider = document.getElementById('muSlider');
+    const lamSlider = document.getElementById('lamSlider');
+    const muVal = document.getElementById('muVal');
+    const lamVal = document.getElementById('lamVal');
+
+    function updatePlot() {
+        currentMu2 = parseFloat(muSlider.value);
+        currentLam = parseFloat(lamSlider.value);
+        
+        muVal.textContent = currentMu2.toFixed(1);
+        lamVal.textContent = currentLam.toFixed(1);
+        
+        Plotly.react('plot', getPlotData(currentMu2, currentLam), layout);
+    }
+
+    muSlider.addEventListener('input', updatePlot);
+    lamSlider.addEventListener('input', updatePlot);
+
+</script>
+</body>
+</html>
