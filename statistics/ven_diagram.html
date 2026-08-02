@@ -315,52 +315,63 @@
             </div>
         </section>
 
-        <!-- Physics and Probability Background / Educational Info -->
+        <!-- Simulation Guide and Explanation -->
         <footer class="grid grid-cols-1 md:grid-cols-2 gap-8 glass-panel p-8 rounded-3xl shadow-xl">
             <div class="space-y-4">
                 <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                    <span class="p-1 rounded bg-cyan-950 text-cyan-400 border border-cyan-800">1</span>
-                    Physics Context: Branching Fractions
+                    <span class="p-1 rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                    </span>
+                    Simulation Interpretation Guide
                 </h3>
                 <div class="text-sm text-gray-300 space-y-3 leading-relaxed">
                     <p>
-                        In particle physics, the <strong>branching ratio (or fraction)</strong> represents the probability that an unstable particle (like the Higgs Boson, \(H\)) decays into a specific final state.
+                        This simulator models the <strong>probability space of Higgs boson decay channels</strong> using both exact geometry and statistical Monte Carlo event simulation.
                     </p>
                     <p>
-                        The Higgs boson is unstable and immediately decays into standard model particles through various channels. For example:
+                        <strong>How the Monte Carlo Simulation works:</strong>
                     </p>
-                    <ul class="list-disc list-inside space-y-1 pl-2 text-gray-400">
-                        <li><strong class="text-cyan-400">\(H \to \gamma\gamma\) (Di-photon channel):</strong> A clean experimental signal but rare (\(BR \approx 0.23\%\)). Used extensively in the 2012 discovery.</li>
-                        <li><strong class="text-magenta-400">\(H \to ZZ^* \to 4\ell\) (Four-lepton channel):</strong> The "Golden Channel" because of its extremely low background noise (\(BR \approx 0.012\%\) for \(4e/\mu\)).</li>
+                    <ul class="list-disc list-inside space-y-1.5 pl-2 text-gray-400 text-xs">
+                        <li>Click <strong class="text-white">🌧️ Rain Decays</strong> to continuously generate random points across the Sample Space \(S\). Each point represents a single simulated Higgs boson decay.</li>
+                        <li>Click <strong class="text-white">⚡ Single Event</strong> to generate one decay event at a time and visualize its impact on the counters.</li>
+                        <li>The simulator checks where each point lands and increments the respective counters: \(N_S, N_A, N_B, N_{A \cap B}, N_{A \cup B}\).</li>
+                        <li>The simulated probability is calculated as the ratio of counts: \(P_{\text{sim}}(E) = \frac{N_{\text{region}}}{N_{\text{total}}}\).</li>
                     </ul>
-                    <div class="bg-slate-900/60 p-3 rounded-xl border border-slate-800 text-xs text-slate-400 italic">
-                        <strong>Physically Mutually Exclusive:</strong> A single Higgs Boson particle can only decay <em>once</em>. In any single decay event, it can decay to \(\gamma\gamma\) OR to \(ZZ^*\), but it is physically impossible to decay to BOTH simultaneously. Therefore, the physical decay events are disjoint: \(P(\gamma\gamma \cap ZZ^*) = 0\). Toggle "Mutually Exclusive" to simulate this physical reality!
-                    </div>
                 </div>
             </div>
 
             <div class="space-y-4">
                 <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                    <span class="p-1 rounded bg-indigo-950 text-indigo-400 border border-indigo-800">2</span>
-                    Probability Math: The Addition Rule
+                    <span class="p-1 rounded bg-indigo-950 text-indigo-400 border border-indigo-800">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                        </svg>
+                    </span>
+                    Real-time Indicators & Color Codes
                 </h3>
                 <div class="text-sm text-gray-300 space-y-3 leading-relaxed">
-                    <p>
-                        The <strong>Addition Rule</strong> states that for any two events \(A\) and \(B\) in a sample space \(S\), the probability of their union (either occurring) is:
-                        \[P(A \cup B) = P(A) + P(B) - P(A \cap B)\]
-                    </p>
-                    <p>
-                        If we do not subtract the intersection \(P(A \cap B)\), we would double-count events that lie in the overlap.
-                    </p>
-                    <h4 class="font-semibold text-white text-xs uppercase tracking-wide mt-2">Mutually Exclusive Events:</h4>
-                    <p>
-                        If \(A\) and \(B\) are mutually exclusive (disjoint), they cannot happen together, which means \(A \cap B = \emptyset\), and hence:
-                        \[P(A \cap B) = 0\]
-                        The addition rule then simplifies directly to:
-                        \[P(A \cup B) = P(A) + P(B)\]
-                    </p>
-                    <p>
-                        <strong>Monte Carlo Integration:</strong> The simulator generates random uniform points inside the box. By counting the ratio of points landing in a region to the total points (\(N_{\text{region}} / N_{\text{total}}\)), we obtain a statistical approximation of the areas. As \(N \to \infty\), the simulated probabilities converge exactly to the theoretical geometric ratios (Law of Large Numbers).
+                    <ul class="space-y-2 text-xs text-gray-400">
+                        <li class="flex items-start gap-2">
+                            <span class="w-3.5 h-3.5 rounded-full bg-cyan-500 shrink-0 mt-0.5 shadow-[0_0_8px_rgba(6,182,212,0.6)]"></span>
+                            <span><strong class="text-cyan-400">Cyan dots</strong> fall strictly inside \(A\) (\(H \to \gamma\gamma\)). They count towards \(N_A\) and \(N_{A \cup B}\).</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="w-3.5 h-3.5 rounded-full bg-magenta-500 shrink-0 mt-0.5 shadow-[0_0_8px_rgba(217,70,239,0.6)]"></span>
+                            <span><strong class="text-magenta-400">Magenta dots</strong> fall strictly inside \(B\) (\(H \to ZZ^*\)). They count towards \(N_B\) and \(N_{A \cup B}\).</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="w-3.5 h-3.5 rounded-full bg-indigo-500 shrink-0 mt-0.5 shadow-[0_0_8px_rgba(99,102,241,0.6)]"></span>
+                            <span><strong class="text-indigo-400">Indigo dots</strong> fall in the overlap region \(A \cap B\). They count towards \(N_A\), \(N_B\), \(N_{A \cap B}\), and \(N_{A \cup B}\).</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="w-3.5 h-3.5 rounded-full bg-slate-500 shrink-0 mt-0.5 shadow-[0_0_4px_rgba(100,116,139,0.4)]"></span>
+                            <span><strong class="text-gray-400">Slate dots</strong> represent all other decay channels of the Higgs Boson in the Sample Space \(S\).</span>
+                        </li>
+                    </ul>
+                    <p class="text-xs text-gray-300">
+                        <strong>Convergence (Law of Large Numbers):</strong> The chart shows both Theoretical and Simulated percentages side by side. As you let the "decay rain" run, the emerald simulated bars will dynamically adjust and align with the theoretical values.
                     </p>
                 </div>
             </div>
@@ -399,6 +410,7 @@
         let isMutuallyExclusive = false;
         let showGrid = true;
         let showDistanceVector = true;
+        let chartUpdateFrameCount = 0;
 
         // Theoretical probabilities
         let probA = 0;
@@ -462,82 +474,87 @@
         // Chart.js Setup
         // ----------------------------------------------------
         function initComparisonChart() {
-            const chartCtx = document.getElementById('comparisonChart').getContext('2d');
-            comparisonChart = new Chart(chartCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['P(A) - Di-photon', 'P(B) - Four-lepton', 'P(A ∩ B) - Overlap', 'P(A ∪ B) - Union'],
-                    datasets: [
-                        {
-                            label: 'Geometric (Theoretical) %',
-                            data: [0, 0, 0, 0],
-                            backgroundColor: [
-                                'rgba(6, 182, 212, 0.75)',  // Cyan
-                                'rgba(217, 70, 239, 0.75)', // Magenta
-                                'rgba(99, 102, 241, 0.75)', // Indigo
-                                'rgba(243, 244, 246, 0.75)'  // White/Light Gray
-                            ],
-                            borderColor: [
-                                '#06b6d4',
-                                '#d946ef',
-                                '#6366f1',
-                                '#f3f4f6'
-                            ],
-                            borderWidth: 1.5,
-                            borderRadius: 6
-                        },
-                        {
-                            label: 'Monte Carlo (Simulated) %',
-                            data: [0, 0, 0, 0],
-                            backgroundColor: 'rgba(16, 185, 129, 0.75)', // Emerald
-                            borderColor: '#10b981',
-                            borderWidth: 1.5,
-                            borderRadius: 6
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: {
-                                color: '#9ca3af',
-                                font: { family: 'Outfit', size: 12 }
+            try {
+                const chartCtx = document.getElementById('comparisonChart').getContext('2d');
+                comparisonChart = new Chart(chartCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['P(A) - Di-photon', 'P(B) - Four-lepton', 'P(A ∩ B) - Overlap', 'P(A ∪ B) - Union'],
+                        datasets: [
+                            {
+                                label: 'Geometric (Theoretical) %',
+                                data: [0, 0, 0, 0],
+                                backgroundColor: [
+                                    'rgba(6, 182, 212, 0.75)',  // Cyan
+                                    'rgba(217, 70, 239, 0.75)', // Magenta
+                                    'rgba(99, 102, 241, 0.75)', // Indigo
+                                    'rgba(243, 244, 246, 0.75)'  // White/Light Gray
+                                ],
+                                borderColor: [
+                                    '#06b6d4',
+                                    '#d946ef',
+                                    '#6366f1',
+                                    '#f3f4f6'
+                                ],
+                                borderWidth: 1.5,
+                                borderRadius: 6
+                            },
+                            {
+                                label: 'Monte Carlo (Simulated) %',
+                                data: [0, 0, 0, 0],
+                                backgroundColor: 'rgba(16, 185, 129, 0.75)', // Emerald
+                                borderColor: '#10b981',
+                                borderWidth: 1.5,
+                                borderRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        animation: false, // Disable animations for performance
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                labels: {
+                                    color: '#9ca3af',
+                                    font: { family: 'Outfit', size: 12 }
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: '#0f172a',
+                                titleFont: { family: 'Outfit', size: 13, weight: 'bold' },
+                                bodyFont: { family: 'JetBrains Mono', size: 12 },
+                                padding: 10,
+                                borderColor: 'rgba(255,255,255,0.08)',
+                                borderWidth: 1
                             }
                         },
-                        tooltip: {
-                            backgroundColor: '#0f172a',
-                            titleFont: { family: 'Outfit', size: 13, weight: 'bold' },
-                            bodyFont: { family: 'JetBrains Mono', size: 12 },
-                            padding: 10,
-                            borderColor: 'rgba(255,255,255,0.08)',
-                            borderWidth: 1
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: {
-                                color: '#9ca3af',
-                                font: { family: 'Outfit', size: 12 }
+                        scales: {
+                            x: {
+                                ticks: {
+                                    color: '#9ca3af',
+                                    font: { family: 'Outfit', size: 12 }
+                                },
+                                grid: { display: false }
                             },
-                            grid: { display: false }
-                        },
-                        y: {
-                            min: 0,
-                            max: 100,
-                            ticks: {
-                                color: '#9ca3af',
-                                font: { family: 'Outfit', size: 12 },
-                                callback: function(value) { return value + '%'; }
-                            },
-                            grid: {
-                                color: 'rgba(255, 255, 255, 0.05)'
+                            y: {
+                                min: 0,
+                                max: 100,
+                                ticks: {
+                                    color: '#9ca3af',
+                                    font: { family: 'Outfit', size: 12 },
+                                    callback: function(value) { return value + '%'; }
+                                },
+                                grid: {
+                                    color: 'rgba(255, 255, 255, 0.05)'
+                                }
                             }
                         }
                     }
-                }
-            });
+                });
+            } catch (err) {
+                console.error("Failed to initialize Chart.js comparison chart:", err);
+            }
         }
 
         // ----------------------------------------------------
@@ -557,8 +574,15 @@
             const r2Sq = r2 * r2;
             const dSq = d * d;
             
-            const part1 = r1Sq * Math.acos((dSq + r1Sq - r2Sq) / (2 * d * r1));
-            const part2 = r2Sq * Math.acos((dSq + r2Sq - r1Sq) / (2 * d * r2));
+            const arg1 = (dSq + r1Sq - r2Sq) / (2 * d * r1);
+            const arg2 = (dSq + r2Sq - r1Sq) / (2 * d * r2);
+            
+            // Clamp to [-1, 1] to avoid NaN from floating point precision limits
+            const clampedArg1 = Math.max(-1, Math.min(1, arg1));
+            const clampedArg2 = Math.max(-1, Math.min(1, arg2));
+            
+            const part1 = r1Sq * Math.acos(clampedArg1);
+            const part2 = r2Sq * Math.acos(clampedArg2);
             const part3 = 0.5 * Math.sqrt((-d + r1 + r2) * (d + r1 - r2) * (d - r1 + r2) * (d + r1 + r2));
             
             return part1 + part2 - part3;
@@ -622,7 +646,7 @@
                 activeDragCircle.y = pos.y - dragOffset.y;
                 
                 resolvePhysics();
-                updateCalculations();
+                updateCalculations(true); // Force instant chart update during drag
             }
         }
 
@@ -638,14 +662,14 @@
         // Physics Constraint Solver (Boundary and Collision)
         // ----------------------------------------------------
         function resolvePhysics() {
-            // Keep both circles inside bounding box S limits
+            // Apply boundary constraints first
             keepInBounds(circleA);
             keepInBounds(circleB);
             
             // Enforce mutual exclusivity pushing if active
             if (isMutuallyExclusive) {
-                // Simple multi-iteration projection method to resolve overlap and boundaries
-                for (let iter = 0; iter < 6; iter++) {
+                // Multi-iteration relaxation to resolve both collision and S bounds properly
+                for (let iter = 0; iter < 10; iter++) {
                     const dx = circleB.x - circleA.x;
                     const dy = circleB.y - circleA.y;
                     const dist = Math.hypot(dx, dy);
@@ -653,29 +677,17 @@
                     
                     if (dist < minDist) {
                         const overlap = minDist - dist;
-                        // Avoid division by zero if centers are identical
                         const nx = dist > 0 ? dx / dist : 1;
                         const ny = dist > 0 ? dy / dist : 0;
                         
-                        // Push vectors (multiply by 1.02 to avoid floating point sticky micro-oscillations)
-                        const pushX = (overlap * 0.5) * nx * 1.02;
-                        const pushY = (overlap * 0.5) * ny * 1.02;
+                        // Push BOTH circles equally (50/50) to allow boundary back-reaction
+                        const pushX = overlap * 0.5 * nx;
+                        const pushY = overlap * 0.5 * ny;
                         
-                        if (activeDragCircle === circleA) {
-                            // Circle A is anchored by user's drag, push Circle B fully
-                            circleB.x += pushX * 2;
-                            circleB.y += pushY * 2;
-                        } else if (activeDragCircle === circleB) {
-                            // Circle B is anchored, push Circle A fully
-                            circleA.x -= pushX * 2;
-                            circleA.y -= pushY * 2;
-                        } else {
-                            // Neutral state (e.g., resizing slider), push both 50/50
-                            circleA.x -= pushX;
-                            circleA.y -= pushY;
-                            circleB.x += pushX;
-                            circleB.y += pushY;
-                        }
+                        circleA.x -= pushX;
+                        circleA.y -= pushY;
+                        circleB.x += pushX;
+                        circleB.y += pushY;
                         
                         // Keep within borders after pushing
                         keepInBounds(circleA);
@@ -696,7 +708,7 @@
         // ----------------------------------------------------
         // Real-Time Probability Calculations
         // ----------------------------------------------------
-        function updateCalculations() {
+        function updateCalculations(forceChartUpdate = false) {
             const areaS = canvas.width * canvas.height; // 400,000 px²
             const areaA = Math.PI * circleA.r * circleA.r;
             const areaB = Math.PI * circleB.r * circleB.r;
@@ -732,32 +744,42 @@
             
             document.getElementById('spectrumAUBVal').innerText = (probAUB * 100).toFixed(1);
 
-            // Update Dashboard Chart
-            updateChartValues();
+            // Update Dashboard Chart (Throttled during simulation rain, instant during dragging/resizing)
+            if (forceChartUpdate || !isRaining) {
+                updateChartValues();
+            } else {
+                chartUpdateFrameCount++;
+                if (chartUpdateFrameCount % 15 === 0) {
+                    updateChartValues();
+                }
+            }
         }
 
         function updateChartValues() {
             if (!comparisonChart) return;
-            
-            // Geometric data
-            const geoValues = [
-                probA * 100,
-                probB * 100,
-                probAB * 100,
-                probAUB * 100
-            ];
-            
-            // Monte Carlo Simulated data
-            const simValues = simCountTotal > 0 ? [
-                (simCountA / simCountTotal) * 100,
-                (simCountB / simCountTotal) * 100,
-                (simCountAB / simCountTotal) * 100,
-                (simCountUnion / simCountTotal) * 100
-            ] : [0, 0, 0, 0];
-            
-            comparisonChart.data.datasets[0].data = geoValues;
-            comparisonChart.data.datasets[1].data = simValues;
-            comparisonChart.update('none'); // Update without chart transition lag
+            try {
+                // Geometric data
+                const geoValues = [
+                    probA * 100,
+                    probB * 100,
+                    probAB * 100,
+                    probAUB * 100
+                ];
+                
+                // Monte Carlo Simulated data
+                const simValues = simCountTotal > 0 ? [
+                    (simCountA / simCountTotal) * 100,
+                    (simCountB / simCountTotal) * 100,
+                    (simCountAB / simCountTotal) * 100,
+                    (simCountUnion / simCountTotal) * 100
+                ] : [0, 0, 0, 0];
+                
+                comparisonChart.data.datasets[0].data = geoValues;
+                comparisonChart.data.datasets[1].data = simValues;
+                comparisonChart.update();
+            } catch (err) {
+                console.error("Failed to update Chart.js comparison data:", err);
+            }
         }
 
         // ----------------------------------------------------
@@ -790,9 +812,13 @@
 
             // 2. Draw Monte Carlo simulated particle rain points
             // Draw particles behind Venn borders so they appear inside the circles
+            ctx.save();
             for (let i = 0; i < particles.length; i++) {
                 const p = particles[i];
                 ctx.fillStyle = p.color;
+                
+                // Particle visual fade-out based on lifetime (60 frames decay timeline)
+                ctx.globalAlpha = Math.max(0, p.life / 60);
                 
                 // If it's a new particle, make it slightly larger or give it a glow ring
                 if (p.life > 45) {
@@ -807,6 +833,7 @@
                 ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
                 ctx.fill();
             }
+            ctx.restore();
 
             // 3. Draw Venn Sets Fill Areas
             // Draw circle A fill
@@ -930,8 +957,8 @@
                 const inB = Math.hypot(px - circleB.x, py - circleB.y) < circleB.r;
 
                 // Determine classification and select visual color
-                let color = '#4b5563'; // background decays (neutral gray)
-                let size = 2;
+                let color = '#5a6e85'; // background decays (visible slate gray)
+                let size = 2.5;
 
                 if (inA && inB && !isMutuallyExclusive) {
                     color = '#818cf8'; // intersection (glowing indigo)
@@ -999,7 +1026,7 @@
                 toggleRain();
             }
 
-            updateCalculations();
+            updateCalculations(true); // Force instant chart update on reset
         }
 
         function toggleRain() {
@@ -1024,14 +1051,14 @@
             circleA.r = parseInt(e.target.value);
             radiusAValue.innerText = circleA.r + ' px';
             resolvePhysics();
-            updateCalculations();
+            updateCalculations(true); // Force instant chart update
         });
 
         radiusBSlider.addEventListener('input', (e) => {
             circleB.r = parseInt(e.target.value);
             radiusBValue.innerText = circleB.r + ' px';
             resolvePhysics();
-            updateCalculations();
+            updateCalculations(true); // Force instant chart update
         });
 
         exclusiveToggle.addEventListener('click', () => {
@@ -1047,7 +1074,7 @@
             }
 
             resolvePhysics();
-            updateCalculations();
+            updateCalculations(true); // Force instant chart update
         });
 
         gridCheckbox.addEventListener('change', (e) => {
@@ -1085,10 +1112,11 @@
                 addSimulatedDecays(rainIntensity);
             }
 
-            // Decrement particle visual lifetimes for fading animations
+            // Decrement particle visual lifetimes and filter out dead ones
             for (let i = 0; i < particles.length; i++) {
                 particles[i].life--;
             }
+            particles = particles.filter(p => p.life > 0);
             
             // Draw frame
             drawCanvas();
