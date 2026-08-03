@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bayes' Theorem: Particle ID Tree</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #080c14;
+            color: #f3f4f6;
+        }
+        .font-mono-numbers {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .glass-panel {
+            background: rgba(22, 30, 49, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        
+        /* SVG Animation/Transition */
+        path.branch {
+            transition: stroke-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            stroke-linecap: round;
+            fill: none;
+        }
+        
+        /* Custom range slider styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            cursor: pointer;
+            margin-top: -6px; /* You need to specify a margin in Chrome, but in Firefox and IE it is automatic */
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #1e293b;
+            border-radius: 2px;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <header class="glass-panel p-6 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-cyan-500 via-indigo-500 to-magenta-500"></div>
+            <div>
+                <div class="flex items-center gap-3">
+                    <span class="px-2.5 py-1 text-xs font-semibold uppercase tracking-wider rounded bg-indigo-950 text-indigo-400 border border-indigo-800">Bayesian Inference</span>
+                </div>
+                <h1 class="text-3xl font-bold tracking-tight text-white mt-2">Particle ID Bayes' Tree</h1>
+                <p class="text-gray-400 mt-1 max-w-2xl">
+                    Visualize how the Base Rate Fallacy affects sample purity. Adjust the prior fraction of signals (\(e\)) and the detector likelihoods to see how false positives (\(\pi \to +\)) can overwhelm a rare signal even with high efficiency.
+                </p>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Side: Interactive Tree Diagram -->
+            <section class="lg:col-span-8 space-y-6">
+                <div class="glass-panel p-6 rounded-3xl shadow-xl flex flex-col">
+                    <div class="flex justify-between items-center mb-2">
+                        <h2 class="text-xl font-bold text-white">Probability Flow Tree</h2>
+                        <span class="bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800 text-xs font-mono-numbers text-gray-400">
+                            Branch Width \(\propto\) Joint Probability
+                        </span>
+                    </div>
+                    
+                    <!-- SVG Tree Container -->
+                    <div class="relative w-full aspect-[16/10] bg-[#030712] rounded-2xl border border-slate-800 overflow-hidden shadow-inner flex items-center justify-center">
+                        <svg viewBox="0 0 800 500" class="w-full h-full" id="bayesTree">
+                            <defs>
+                                <!-- Gradients for Branches -->
+                                <linearGradient id="gradRootE" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#475569" /> <!-- Slate -->
+                                    <stop offset="100%" stop-color="#06b6d4" /> <!-- Cyan (Signal) -->
+                                </linearGradient>
+                                <linearGradient id="gradRootPi" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#475569" /> <!-- Slate -->
+                                    <stop offset="100%" stop-color="#d946ef" /> <!-- Magenta (Bkg) -->
+                                </linearGradient>
+                                
+                                <linearGradient id="gradEPos" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#06b6d4" /> <!-- Cyan -->
+                                    <stop offset="100%" stop-color="#10b981" /> <!-- Emerald (True Positive) -->
+                                </linearGradient>
+                                <linearGradient id="gradENeg" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#06b6d4" /> <!-- Cyan -->
+                                    <stop offset="100%" stop-color="#ef4444" /> <!-- Red (False Negative) -->
+                                </linearGradient>
+                                
+                                <linearGradient id="gradPiPos" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#d946ef" /> <!-- Magenta -->
+                                    <stop offset="100%" stop-color="#f59e0b" /> <!-- Amber (False Positive) -->
+                                </linearGradient>
+                                <linearGradient id="gradPiNeg" x1="0%" y1="0%" x2="100%" y2="0%">
+                                    <stop offset="0%" stop-color="#d946ef" /> <!-- Magenta -->
+                                    <stop offset="100%" stop-color="#10b981" /> <!-- Emerald (True Negative) -->
+                                </linearGradient>
+
+                                <!-- Drop shadow for nodes -->
+                                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                                    <feGaussianBlur stdDeviation="5" result="blur" />
+                                    <feComposite in="SourceGraphic" in2="blur" operator="over" />
+                                </filter>
+                            </defs>
+                            
+                            <!-- Branch Paths (updated dynamically by JS) -->
+                            <!-- Format: M startX startY C cp1X cp1Y, cp2X cp2Y, endX endY -->
+                            <!-- Primary splits -->
+                            <path id="pathE" class="branch" stroke="url(#gradRootE)" d="M 120 250 C 220 250, 220 120, 360 120" />
+                            <path id="pathPi" class="branch" stroke="url(#gradRootPi)" d="M 120 250 C 220 250, 220 380, 360 380" />
+                            
+                            <!-- Secondary splits from e -->
+                            <path id="pathEPos" class="branch" stroke="url(#gradEPos)" d="M 360 120 C 460 120, 460 50, 600 50" />
+                            <path id="pathENeg" class="branch" stroke="url(#gradENeg)" d="M 360 120 C 460 120, 460 190, 600 190" />
+                            
+                            <!-- Secondary splits from pi -->
+                            <path id="pathPiPos" class="branch" stroke="url(#gradPiPos)" d="M 360 380 C 460 380, 460 310, 600 310" />
+                            <path id="pathPiNeg" class="branch" stroke="url(#gradPiNeg)" d="M 360 380 C 460 380, 460 450, 600 450" />
+
+                            <!-- Base Nodes (Circles) -->
+                            <!-- Root Node -->
+                            <circle cx="120" cy="250" r="25" fill="#1e293b" stroke="#475569" stroke-width="4" filter="url(#glow)"/>
+                            <text x="120" y="255" fill="#f8fafc" text-anchor="middle" font-weight="bold" font-size="14">All</text>
+                            
+                            <!-- Primary Nodes -->
+                            <circle cx="360" cy="120" r="25" fill="#164e63" stroke="#06b6d4" stroke-width="3" filter="url(#glow)"/>
+                            <text x="360" y="125" fill="#cffafe" text-anchor="middle" font-weight="bold" font-size="16">e⁻</text>
+                            
+                            <circle cx="360" cy="380" r="25" fill="#701a75" stroke="#d946ef" stroke-width="3" filter="url(#glow)"/>
+                            <text x="360" y="385" fill="#fae8ff" text-anchor="middle" font-weight="bold" font-size="16">π⁻</text>
+                            
+                            <!-- Secondary Nodes (Outcomes) -->
+                            <!-- e -> + (True Positive) -->
+                            <circle cx="600" cy="50" r="20" fill="#064e3b" stroke="#10b981" stroke-width="3" />
+                            <text x="600" y="55" fill="#d1fae5" text-anchor="middle" font-weight="bold" font-size="16">+</text>
+                            <text x="635" y="54" fill="#a7f3d0" text-anchor="start" font-size="12" font-weight="600">True Pos</text>
+                            
+                            <!-- e -> - (False Negative) -->
+                            <circle cx="600" cy="190" r="20" fill="#7f1d1d" stroke="#ef4444" stroke-width="3" />
+                            <text x="600" y="195" fill="#fee2e2" text-anchor="middle" font-weight="bold" font-size="16">−</text>
+                            <text x="635" y="194" fill="#fecaca" text-anchor="start" font-size="12" font-weight="600">False Neg</text>
+                            
+                            <!-- pi -> + (False Positive) -->
+                            <circle cx="600" cy="310" r="20" fill="#78350f" stroke="#f59e0b" stroke-width="3" />
+                            <text x="600" y="315" fill="#fef3c7" text-anchor="middle" font-weight="bold" font-size="16">+</text>
+                            <text x="635" y="314" fill="#fde68a" text-anchor="start" font-size="12" font-weight="600">False Pos</text>
+                            
+                            <!-- pi -> - (True Negative) -->
+                            <circle cx="600" cy="450" r="20" fill="#064e3b" stroke="#10b981" stroke-width="3" />
+                            <text x="600" y="455" fill="#d1fae5" text-anchor="middle" font-weight="bold" font-size="16">−</text>
+                            <text x="635" y="454" fill="#a7f3d0" text-anchor="start" font-size="12" font-weight="600">True Neg</text>
+
+                            <!-- Dynamic Text Labels for Probabilities (updated by JS) -->
+                            <!-- Primary Branches -->
+                            <text id="lblPriorE" x="240" y="150" fill="#22d3ee" text-anchor="middle" font-size="13" font-weight="bold" class="font-mono-numbers bg-slate-900">5.0%</text>
+                            <text id="lblPriorPi" x="240" y="360" fill="#f472b6" text-anchor="middle" font-size="13" font-weight="bold" class="font-mono-numbers">95.0%</text>
+                            
+                            <!-- Secondary Branches -->
+                            <!-- True Pos Joint -->
+                            <text id="lblJointEPos" x="480" y="70" fill="#34d399" text-anchor="middle" font-size="12" font-weight="600" class="font-mono-numbers">4.5%</text>
+                            <!-- False Neg Joint -->
+                            <text id="lblJointENeg" x="480" y="175" fill="#f87171" text-anchor="middle" font-size="12" font-weight="600" class="font-mono-numbers">0.5%</text>
+                            <!-- False Pos Joint -->
+                            <text id="lblJointPiPos" x="480" y="335" fill="#fbbf24" text-anchor="middle" font-size="12" font-weight="600" class="font-mono-numbers">9.5%</text>
+                            <!-- True Neg Joint -->
+                            <text id="lblJointPiNeg" x="480" y="430" fill="#34d399" text-anchor="middle" font-size="12" font-weight="600" class="font-mono-numbers">85.5%</text>
+                        </svg>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Right Side: Controls & Bayesian Math -->
+            <section class="lg:col-span-4 space-y-6">
+                
+                <!-- Controls Panel -->
+                <div class="glass-panel p-6 rounded-3xl shadow-xl space-y-6">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+                        <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path>
+                        </svg>
+                        Configuration
+                    </h2>
+                    
+                    <!-- Prior: Signal Fraction -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <label class="text-xs font-bold text-cyan-400 uppercase tracking-wide">Prior Signal: \(P(e)\)</label>
+                            <span class="text-sm font-mono-numbers text-cyan-300 font-bold bg-cyan-950/50 px-2 py-0.5 rounded" id="valPrior">5.0%</span>
+                        </div>
+                        <p class="text-[10px] text-gray-500">True fraction of electrons in the beam.</p>
+                        <input type="range" id="sliderPrior" min="0.1" max="50" step="0.1" value="5" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    
+                    <!-- TPR: Signal Efficiency -->
+                    <div class="space-y-2 pt-2 border-t border-slate-800/50">
+                        <div class="flex justify-between items-center">
+                            <label class="text-xs font-bold text-emerald-400 uppercase tracking-wide">Efficiency: \(P(+|e)\)</label>
+                            <span class="text-sm font-mono-numbers text-emerald-300 font-bold bg-emerald-950/50 px-2 py-0.5 rounded" id="valTPR">90.0%</span>
+                        </div>
+                        <p class="text-[10px] text-gray-500">True Positive Rate (how often an electron passes).</p>
+                        <input type="range" id="sliderTPR" min="10" max="100" step="1" value="90" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    
+                    <!-- FPR: Fake Rate -->
+                    <div class="space-y-2 pt-2 border-t border-slate-800/50">
+                        <div class="flex justify-between items-center">
+                            <label class="text-xs font-bold text-amber-500 uppercase tracking-wide">Fake Rate: \(P(+|\pi)\)</label>
+                            <span class="text-sm font-mono-numbers text-amber-400 font-bold bg-amber-950/50 px-2 py-0.5 rounded" id="valFPR">10.0%</span>
+                        </div>
+                        <p class="text-[10px] text-gray-500">False Positive Rate (how often a pion is misidentified).</p>
+                        <input type="range" id="sliderFPR" min="0" max="50" step="0.1" value="10" class="w-full h-1.5 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Math Panel: Posterior Calculation -->
+                <div class="glass-panel p-6 rounded-3xl shadow-xl space-y-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+                        <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h-3a2 2 0 00-2 2v9a2 2 0 002 2h9a2 2 0 002-2v-3m-1-4h-3m2 2l-3-3m3 3l3-3M12 21h.01M12 17h.01M12 13h.01M12 9h.01M8 17h.01M8 13h.01M8 9h.01M16 17h.01M16 13h.01M16 9h.01"></path>
+                        </svg>
+                        Posterior Purity
+                    </h2>
+                    
+                    <div class="text-[11px] text-gray-400 font-medium">Bayes' Theorem:</div>
+                    <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 text-center overflow-x-auto overflow-y-hidden">
+                        \( P(e|+) = \frac{P(+|e)P(e)}{P(+|e)P(e) + P(+|\pi)P(\pi)} \)
+                    </div>
+                    
+                    <!-- Dynamic Math Values -->
+                    <div class="bg-[#030712] p-4 rounded-xl border border-slate-800 font-mono-numbers text-xs space-y-2">
+                        <div class="flex justify-between items-center text-emerald-400">
+                            <span>True Pos: \(P(+|e)P(e)\)</span>
+                            <span id="mathTP">0.0450</span>
+                        </div>
+                        <div class="flex justify-between items-center text-amber-500">
+                            <span>False Pos: \(P(+|\pi)P(\pi)\)</span>
+                            <span id="mathFP">0.0950</span>
+                        </div>
+                        <div class="h-px w-full bg-slate-800 my-1"></div>
+                        <div class="flex justify-between items-center text-gray-300 font-bold">
+                            <span>Total Pos: \(P(+)\)</span>
+                            <span id="mathTotalP">0.1400</span>
+                        </div>
+                    </div>
+
+                    <!-- Purity Progress Bar -->
+                    <div class="pt-2">
+                        <div class="flex justify-between items-end mb-1">
+                            <span class="text-xs font-bold text-white uppercase tracking-wider">Sample Purity</span>
+                            <span class="text-2xl font-bold text-white font-mono-numbers" id="purityVal">32.1%</span>
+                        </div>
+                        <div class="h-5 w-full bg-slate-900 rounded-lg flex overflow-hidden border border-slate-700 shadow-inner">
+                            <!-- True Positives fraction -->
+                            <div id="barTruePos" class="h-full bg-emerald-500 transition-all duration-300 flex items-center justify-center text-[10px] font-bold text-emerald-950" style="width: 32.1%">
+                                e⁻
+                            </div>
+                            <!-- False Positives fraction -->
+                            <div id="barFalsePos" class="h-full bg-amber-500 transition-all duration-300 flex items-center justify-center text-[10px] font-bold text-amber-950" style="width: 67.9%">
+                                π⁻ Fake
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-2 text-center" id="purityDesc">
+                            Even though efficiency is 90%, 68% of the accepted sample is fake background.
+                        </p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        // Data variables
+        let pE = 0.05;         // P(e) Prior
+        let pPi = 0.95;        // P(pi)
+        
+        let pPosGivenE = 0.90; // TPR P(+|e)
+        let pNegGivenE = 0.10; // FNR P(-|e)
+        
+        let pPosGivenPi = 0.10; // FPR P(+|pi)
+        let pNegGivenPi = 0.90; // TNR P(-|pi)
+
+        // Max stroke width for 100% probability branch
+        const MAX_THICKNESS = 65;
+        const MIN_THICKNESS = 1.5; // Just so branches never truly disappear completely for visual connectivity
+
+        // Elements: Sliders
+        const sliderPrior = document.getElementById('sliderPrior');
+        const sliderTPR = document.getElementById('sliderTPR');
+        const sliderFPR = document.getElementById('sliderFPR');
+        
+        // Elements: Badges
+        const valPrior = document.getElementById('valPrior');
+        const valTPR = document.getElementById('valTPR');
+        const valFPR = document.getElementById('valFPR');
+
+        // Elements: SVG Paths
+        const pathE = document.getElementById('pathE');
+        const pathPi = document.getElementById('pathPi');
+        const pathEPos = document.getElementById('pathEPos');
+        const pathENeg = document.getElementById('pathENeg');
+        const pathPiPos = document.getElementById('pathPiPos');
+        const pathPiNeg = document.getElementById('pathPiNeg');
+
+        // Elements: SVG Labels
+        const lblPriorE = document.getElementById('lblPriorE');
+        const lblPriorPi = document.getElementById('lblPriorPi');
+        const lblJointEPos = document.getElementById('lblJointEPos');
+        const lblJointENeg = document.getElementById('lblJointENeg');
+        const lblJointPiPos = document.getElementById('lblJointPiPos');
+        const lblJointPiNeg = document.getElementById('lblJointPiNeg');
+
+        // Elements: Math & Dashboard
+        const mathTP = document.getElementById('mathTP');
+        const mathFP = document.getElementById('mathFP');
+        const mathTotalP = document.getElementById('mathTotalP');
+        const purityVal = document.getElementById('purityVal');
+        const barTruePos = document.getElementById('barTruePos');
+        const barFalsePos = document.getElementById('barFalsePos');
+        const purityDesc = document.getElementById('purityDesc');
+
+        function updateMath() {
+            // Read inputs
+            pE = parseFloat(sliderPrior.value) / 100.0;
+            pPi = 1.0 - pE;
+            
+            pPosGivenE = parseFloat(sliderTPR.value) / 100.0;
+            pNegGivenE = 1.0 - pPosGivenE;
+            
+            pPosGivenPi = parseFloat(sliderFPR.value) / 100.0;
+            pNegGivenPi = 1.0 - pPosGivenPi;
+
+            // Update Badges
+            valPrior.innerText = (pE * 100).toFixed(1) + '%';
+            valTPR.innerText = (pPosGivenE * 100).toFixed(1) + '%';
+            valFPR.innerText = (pPosGivenPi * 100).toFixed(1) + '%';
+
+            // Calculate Joint Probabilities
+            const jointEPos = pE * pPosGivenE;
+            const jointENeg = pE * pNegGivenE;
+            const jointPiPos = pPi * pPosGivenPi;
+            const jointPiNeg = pPi * pNegGivenPi;
+
+            // Marginal Probabilities
+            const totalPos = jointEPos + jointPiPos;
+            
+            // Posterior (Purity)
+            const purity = totalPos > 0 ? (jointEPos / totalPos) : 0;
+            const fakeFrac = totalPos > 0 ? (jointPiPos / totalPos) : 0;
+
+            // Update SVG Branch Thicknesses
+            pathE.style.strokeWidth = Math.max(MIN_THICKNESS, pE * MAX_THICKNESS);
+            pathPi.style.strokeWidth = Math.max(MIN_THICKNESS, pPi * MAX_THICKNESS);
+            
+            pathEPos.style.strokeWidth = Math.max(MIN_THICKNESS, jointEPos * MAX_THICKNESS);
+            pathENeg.style.strokeWidth = Math.max(MIN_THICKNESS, jointENeg * MAX_THICKNESS);
+            
+            pathPiPos.style.strokeWidth = Math.max(MIN_THICKNESS, jointPiPos * MAX_THICKNESS);
+            pathPiNeg.style.strokeWidth = Math.max(MIN_THICKNESS, jointPiNeg * MAX_THICKNESS);
+
+            // Update SVG Labels
+            lblPriorE.textContent = (pE * 100).toFixed(1) + '%';
+            lblPriorPi.textContent = (pPi * 100).toFixed(1) + '%';
+            
+            lblJointEPos.textContent = (jointEPos * 100).toFixed(1) + '%';
+            lblJointENeg.textContent = (jointENeg * 100).toFixed(1) + '%';
+            lblJointPiPos.textContent = (jointPiPos * 100).toFixed(1) + '%';
+            lblJointPiNeg.textContent = (jointPiNeg * 100).toFixed(1) + '%';
+
+            // Adjust y-position of labels to float slightly above the varying stroke width
+            // This is a subtle UX improvement so text doesn't overlap thick branches
+            lblPriorE.setAttribute('y', 150 - (pE * MAX_THICKNESS)/2);
+            lblPriorPi.setAttribute('y', 365 + (pPi * MAX_THICKNESS)/2);
+            
+            // Update Math Text Panel
+            mathTP.innerText = jointEPos.toFixed(4);
+            mathFP.innerText = jointPiPos.toFixed(4);
+            mathTotalP.innerText = totalPos.toFixed(4);
+
+            // Update Progress Bar
+            const purityPct = purity * 100;
+            const fakePct = fakeFrac * 100;
+            
+            purityVal.innerText = purityPct.toFixed(1) + '%';
+            
+            barTruePos.style.width = purityPct + '%';
+            barFalsePos.style.width = fakePct + '%';
+            
+            // Only show text inside bar if wide enough
+            barTruePos.innerText = purityPct > 10 ? 'e⁻' : '';
+            barFalsePos.innerText = fakePct > 15 ? 'π⁻ Fake' : '';
+
+            // Dynamic Description Text
+            if (purityPct < 50) {
+                purityDesc.innerHTML = `⚠️ Even though efficiency is <strong>${(pPosGivenE*100).toFixed(1)}%</strong>, <strong>${fakePct.toFixed(1)}%</strong> of the accepted sample is fake background. This is the Base Rate Fallacy.`;
+                purityDesc.className = "text-[11px] text-amber-500 mt-3 text-center";
+            } else if (purityPct > 90) {
+                purityDesc.innerHTML = `✅ Excellent! The selected sample is highly pure (<strong>${purityPct.toFixed(1)}%</strong> true electrons).`;
+                purityDesc.className = "text-[11px] text-emerald-400 mt-3 text-center";
+            } else {
+                purityDesc.innerHTML = `The selected sample contains <strong>${purityPct.toFixed(1)}%</strong> true electrons and <strong>${fakePct.toFixed(1)}%</strong> background.`;
+                purityDesc.className = "text-[11px] text-cyan-400 mt-3 text-center";
+            }
+        }
+
+        // Attach listeners
+        sliderPrior.addEventListener('input', updateMath);
+        sliderTPR.addEventListener('input', updateMath);
+        sliderFPR.addEventListener('input', updateMath);
+
+        // Initial paint
+        window.addEventListener('load', () => {
+            updateMath();
+        });
+    </script>
+</body>
+</html>
