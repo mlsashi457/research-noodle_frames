@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Covariance & Orthogonalization</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #080c14;
+            color: #f3f4f6;
+            overflow-x: hidden;
+        }
+        .font-mono-numbers { font-family: 'JetBrains Mono', monospace; }
+        .glass-panel {
+            background: rgba(22, 30, 49, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        /* Custom range slider styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px; width: 16px; border-radius: 50%;
+            background: #ffffff; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer;
+            background: #1e293b; border-radius: 2px;
+        }
+        input[type=range]:focus { outline: none; }
+        
+        .matrix-display {
+            display: inline-block;
+            position: relative;
+            padding: 0 10px;
+        }
+        .matrix-display::before, .matrix-display::after {
+            content: "";
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 6px;
+            border: 2px solid #94a3b8;
+        }
+        .matrix-display::before { left: 0; border-right: none; }
+        .matrix-display::after { right: 0; border-left: none; }
+    </style>
+</head>
+<body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <header class="glass-panel p-6 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500"></div>
+            <div>
+                <div class="flex items-center gap-3">
+                    <span class="px-2.5 py-1 text-xs font-semibold uppercase tracking-wider rounded bg-orange-950 text-orange-400 border border-orange-800">Linear Algebra</span>
+                </div>
+                <h1 class="text-3xl font-bold tracking-tight text-white mt-2">Covariance & Orthogonalization</h1>
+                <p class="text-gray-400 mt-1 max-w-2xl">
+                    Visualize the covariance matrix via a \(1\sigma\) error ellipse. Adjust the standard deviations and correlation to tilt and stretch the space. Use the Orthogonalize button to rotate into the principal component basis (eigenvectors), decorrelating the variables.
+                </p>
+            </div>
+            
+            <button id="btnOrthogonalize" class="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition transform active:scale-95 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                Orthogonalize (PCA)
+            </button>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Side: Interactive Canvas Area -->
+            <section class="lg:col-span-8 space-y-6">
+                <div class="glass-panel p-6 rounded-3xl shadow-xl flex flex-col items-center relative overflow-hidden">
+                    <div class="w-full flex justify-between items-center mb-4 relative z-10">
+                        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-orange-500 animate-pulse"></span>
+                            Vector Space
+                        </h2>
+                        <div class="bg-slate-900/80 px-3 py-1 rounded-lg border border-slate-700 text-xs font-mono-numbers text-gray-400">
+                            Basis Rotation Angle: <span id="valRotation" class="text-white font-bold">0.0°</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Canvas Container -->
+                    <div class="relative w-full aspect-square max-w-[700px] bg-[#030712] rounded-2xl border border-slate-800 shadow-inner flex items-center justify-center overflow-hidden z-10">
+                        <canvas id="covCanvas" class="w-full h-full block"></canvas>
+                        
+                        <!-- Axis Labels overlay -->
+                        <div class="absolute bottom-2 right-4 text-xs font-bold text-slate-500" id="labelX">X Axis</div>
+                        <div class="absolute top-2 left-4 text-xs font-bold text-slate-500" id="labelY">Y Axis</div>
+                    </div>
+                    
+                    <!-- Grid background glow effect -->
+                    <div class="absolute inset-0 bg-orange-500/5 blur-3xl z-0 pointer-events-none"></div>
+                </div>
+            </section>
+
+            <!-- Right Side: Controls & Covariance Math -->
+            <section class="lg:col-span-4 space-y-6">
+                
+                <!-- Controls Panel -->
+                <div class="glass-panel p-6 rounded-3xl shadow-xl space-y-6">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+                        <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+                        Distribution Parameters
+                    </h2>
+                    
+                    <!-- Sigma X -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <label class="text-xs font-bold text-cyan-400 uppercase tracking-wide">Std Dev X (\( \sigma_x \))</label>
+                            <span class="text-sm font-mono-numbers text-cyan-300 font-bold bg-cyan-950/50 px-2 py-0.5 rounded" id="valSigX">2.0</span>
+                        </div>
+                        <input type="range" id="sliderSigX" min="0.5" max="5.0" step="0.1" value="2.0" class="w-full h-1.5 rounded-lg accent-cyan-400 cursor-pointer">
+                    </div>
+                    
+                    <!-- Sigma Y -->
+                    <div class="space-y-2 pt-2 border-t border-slate-800/50">
+                        <div class="flex justify-between items-center">
+                            <label class="text-xs font-bold text-fuchsia-400 uppercase tracking-wide">Std Dev Y (\( \sigma_y \))</label>
+                            <span class="text-sm font-mono-numbers text-fuchsia-300 font-bold bg-fuchsia-950/50 px-2 py-0.5 rounded" id="valSigY">1.5</span>
+                        </div>
+                        <input type="range" id="sliderSigY" min="0.5" max="5.0" step="0.1" value="1.5" class="w-full h-1.5 rounded-lg accent-fuchsia-400 cursor-pointer">
+                    </div>
+
+                    <!-- Correlation Rho -->
+                    <div class="space-y-2 pt-2 border-t border-slate-800/50">
+                        <div class="flex justify-between items-center">
+                            <label class="text-xs font-bold text-orange-400 uppercase tracking-wide">Correlation (\( \rho \))</label>
+                            <span class="text-sm font-mono-numbers text-orange-300 font-bold bg-orange-950/50 px-2 py-0.5 rounded transition-all duration-300" id="valRho">0.80</span>
+                        </div>
+                        <input type="range" id="sliderRho" min="-0.99" max="0.99" step="0.01" value="0.80" class="w-full h-1.5 rounded-lg accent-orange-400 cursor-pointer">
+                    </div>
+                </div>
+
+                <!-- Math Panel: Covariance Matrix -->
+                <div class="glass-panel p-6 rounded-3xl shadow-xl space-y-4">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+                        <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h-3a2 2 0 00-2 2v9a2 2 0 002 2h9a2 2 0 002-2v-3m-1-4h-3m2 2l-3-3m3 3l3-3M12 21h.01M12 17h.01M12 13h.01M12 9h.01M8 17h.01M8 13h.01M8 9h.01M16 17h.01M16 13h.01M16 9h.01"></path></svg>
+                        Covariance Matrix \(\Sigma\)
+                    </h2>
+                    
+                    <div class="flex justify-center items-center py-4 text-gray-300">
+                        <span class="mr-3 text-lg font-bold">\(\Sigma =\)</span>
+                        <div class="matrix-display text-center font-mono-numbers text-sm tracking-widest leading-loose">
+                            <div class="grid grid-cols-2 gap-x-6">
+                                <span id="matXX" class="text-cyan-300 font-bold transition-all duration-300">4.00</span>
+                                <span id="matXY" class="text-orange-300 transition-all duration-300">2.40</span>
+                                <span id="matYX" class="text-orange-300 transition-all duration-300">2.40</span>
+                                <span id="matYY" class="text-fuchsia-300 font-bold transition-all duration-300">2.25</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/50 p-3 rounded-xl border border-slate-800 space-y-2 mt-4 text-xs font-mono-numbers text-gray-400">
+                        <div class="flex justify-between items-center">
+                            <span>Eigenvalue \(\lambda_1\) (Major):</span>
+                            <span class="text-white" id="valLambda1">5.20</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Eigenvalue \(\lambda_2\) (Minor):</span>
+                            <span class="text-white" id="valLambda2">1.05</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span>Tilt Angle \(\theta\):</span>
+                            <span class="text-white" id="valTheta">32.5°</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        const canvas = document.getElementById('covCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        let width = canvas.width;
+        let height = canvas.height;
+        
+        // Physics / Math state
+        let sigX = 2.0;
+        let sigY = 1.5;
+        let rho = 0.8;
+        
+        // Eigen decomposition state
+        let lambda1 = 1;
+        let lambda2 = 1;
+        let theta = 0; // The angle of the primary eigenvector (in radians)
+
+        // Viewport config
+        const bounds = 8; // Coordinate space is [-bounds, bounds] in x and y
+        
+        // Animation State
+        let currentRotation = 0; // Current basis rotation angle (animated)
+        let isOrthogonalized = false;
+        let animationFrame = null;
+        let targetRotation = 0;
+
+        // Data Points (we generate a set of standardized Z1, Z2 and transform them to avoid regenerating and jumping)
+        const N = 1000;
+        const baseZ1 = new Float32Array(N);
+        const baseZ2 = new Float32Array(N);
+
+        // Box-Muller to populate standard normal base
+        function randn_bm() {
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random();
+            while(v === 0) v = Math.random();
+            return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        }
+
+        for (let i = 0; i < N; i++) {
+            baseZ1[i] = randn_bm();
+            baseZ2[i] = randn_bm();
+        }
+
+        // UI Elements
+        const sliderSigX = document.getElementById('sliderSigX');
+        const sliderSigY = document.getElementById('sliderSigY');
+        const sliderRho = document.getElementById('sliderRho');
+        const btnOrthogonalize = document.getElementById('btnOrthogonalize');
+        
+        // DOM Updaters
+        function resizeCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            ctx.scale(dpr, dpr);
+            width = rect.width;
+            height = rect.height;
+            draw();
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        function updateMath() {
+            sigX = parseFloat(sliderSigX.value);
+            sigY = parseFloat(sliderSigY.value);
+            rho = parseFloat(sliderRho.value);
+            
+            // Re-read slider if we are in orthogonalized mode to snap out of it
+            if (isOrthogonalized && document.activeElement.tagName === 'INPUT') {
+                toggleOrthogonalize(false);
+            }
+
+            // Covariance Matrix components
+            const varX = sigX * sigX;
+            const varY = sigY * sigY;
+            const covXY = rho * sigX * sigY;
+
+            // Eigenvalues calculation
+            const trace = varX + varY;
+            const det = (varX * varY) - (covXY * covXY);
+            
+            const sqrtTerm = Math.sqrt(trace * trace - 4 * det);
+            lambda1 = (trace + sqrtTerm) / 2;
+            lambda2 = (trace - sqrtTerm) / 2;
+
+            // Eigenvector angle (theta)
+            if (covXY === 0) {
+                theta = (varX >= varY) ? 0 : Math.PI / 2;
+            } else {
+                theta = Math.atan2(lambda1 - varX, covXY);
+            }
+
+            // If we are orthogonalized, targetRotation should track -theta so it stays aligned if sliders are moved (though usually sliders break ortho mode, let's keep it robust)
+            if (isOrthogonalized) {
+                targetRotation = -theta;
+                currentRotation = targetRotation; // snap if sliders move while orthogonalized
+            } else {
+                targetRotation = 0;
+            }
+
+            updateDashboardUI();
+            draw();
+        }
+
+        function updateDashboardUI() {
+            document.getElementById('valSigX').innerText = sigX.toFixed(1);
+            document.getElementById('valSigY').innerText = sigY.toFixed(1);
+            
+            // Compute the 'apparent' rho based on the current rotation frame
+            // For a pure rotation by currentRotation, the apparent correlation changes. 
+            // We use interpolation for visual effect in the dashboard:
+            // When currentRotation == 0, apparentRho = rho
+            // When currentRotation == -theta, apparentRho = 0
+            let ratio = 0;
+            if (theta !== 0) {
+                ratio = Math.abs(currentRotation / (-theta)); 
+                ratio = Math.max(0, Math.min(1, ratio)); // bound 0 to 1
+            } else {
+                ratio = (currentRotation === 0) ? 0 : 1;
+            }
+            const apparentRho = rho * (1 - ratio);
+            
+            const elRho = document.getElementById('valRho');
+            elRho.innerText = apparentRho.toFixed(2);
+            
+            if (Math.abs(apparentRho) < 0.05 && isOrthogonalized) {
+                elRho.classList.add('text-emerald-400');
+                elRho.classList.remove('text-orange-300');
+            } else {
+                elRho.classList.add('text-orange-300');
+                elRho.classList.remove('text-emerald-400');
+            }
+
+            // Matrix Elements
+            const varX = sigX * sigX;
+            const varY = sigY * sigY;
+            const covXY = rho * sigX * sigY;
+            
+            // Apparent Matrix (interpolated for visual demo)
+            const appVarX = varX * (1-ratio) + lambda1 * ratio;
+            const appVarY = varY * (1-ratio) + lambda2 * ratio;
+            const appCovXY = covXY * (1-ratio) + 0 * ratio;
+
+            document.getElementById('matXX').innerText = appVarX.toFixed(2);
+            document.getElementById('matYY').innerText = appVarY.toFixed(2);
+            document.getElementById('matXY').innerText = appCovXY.toFixed(2);
+            document.getElementById('matYX').innerText = appCovXY.toFixed(2);
+
+            document.getElementById('valLambda1').innerText = lambda1.toFixed(2);
+            document.getElementById('valLambda2').innerText = lambda2.toFixed(2);
+            
+            let deg = (theta * 180 / Math.PI);
+            // keep degree in [-90, 90] range visually
+            if (deg > 90) deg -= 180;
+            if (deg < -90) deg += 180;
+            document.getElementById('valTheta').innerText = deg.toFixed(1) + '°';
+
+            document.getElementById('valRotation').innerText = (currentRotation * 180 / Math.PI).toFixed(1) + '°';
+        }
+
+        // Animation Loop for Orthogonalization
+        function animateRotation() {
+            const diff = targetRotation - currentRotation;
+            if (Math.abs(diff) < 0.001) {
+                currentRotation = targetRotation;
+                updateDashboardUI();
+                draw();
+                if (animationFrame) cancelAnimationFrame(animationFrame);
+                animationFrame = null;
+                return;
+            }
+            
+            // Spring/Ease interpolation
+            currentRotation += diff * 0.1;
+            
+            updateDashboardUI();
+            draw();
+            
+            animationFrame = requestAnimationFrame(animateRotation);
+        }
+
+        function toggleOrthogonalize(forceState = null) {
+            if (forceState !== null) {
+                isOrthogonalized = forceState;
+            } else {
+                isOrthogonalized = !isOrthogonalized;
+            }
+
+            if (isOrthogonalized) {
+                targetRotation = -theta;
+                btnOrthogonalize.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg> Reset Basis`;
+                btnOrthogonalize.className = "bg-slate-700 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition transform active:scale-95 flex items-center gap-2";
+            } else {
+                targetRotation = 0;
+                btnOrthogonalize.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg> Orthogonalize (PCA)`;
+                btnOrthogonalize.className = "bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white font-bold py-3 px-6 rounded-xl shadow-lg transition transform active:scale-95 flex items-center gap-2";
+            }
+
+            if (!animationFrame) {
+                animateRotation();
+            }
+        }
+
+        btnOrthogonalize.addEventListener('click', () => toggleOrthogonalize());
+
+        // Drawing Code
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            
+            const cx = width / 2;
+            const cy = height / 2;
+            
+            // We want to scale such that `bounds` maps to half width/height
+            // Using min dimension to keep aspect ratio 1:1 square
+            const minDim = Math.min(width, height);
+            const scale = (minDim / 2) / bounds; 
+            
+            // Save context, move to center, apply rotation
+            ctx.save();
+            ctx.translate(cx, cy);
+            
+            // Apply basis rotation
+            ctx.rotate(currentRotation);
+
+            // Draw Background Grid (Rotates with basis)
+            ctx.strokeStyle = 'rgba(30, 41, 59, 0.5)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = -bounds; i <= bounds; i++) {
+                // Vertical lines
+                ctx.moveTo(i * scale, -bounds * scale);
+                ctx.lineTo(i * scale, bounds * scale);
+                // Horizontal lines
+                ctx.moveTo(-bounds * scale, i * scale);
+                ctx.lineTo(bounds * scale, i * scale);
+            }
+            ctx.stroke();
+
+            // Draw Primary Axes (Rotates with basis)
+            ctx.strokeStyle = '#334155';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(0, -bounds * scale); ctx.lineTo(0, bounds * scale); // Y
+            ctx.moveTo(-bounds * scale, 0); ctx.lineTo(bounds * scale, 0); // X
+            ctx.stroke();
+
+            // Calculate actual point coordinates using the Cholesky decomposition of Sigma
+            // [X] = [sigX     0    ] * [Z1]
+            // [Y]   [sigY*rho sigY*sqrt(1-rho^2)]   [Z2]
+            
+            const l11 = sigX;
+            const l21 = sigY * rho;
+            const l22 = sigY * Math.sqrt(1 - rho * rho);
+
+            // Draw Scatter Points
+            ctx.fillStyle = 'rgba(251, 146, 60, 0.3)'; // orange-400 transparent
+            ctx.beginPath();
+            for (let i = 0; i < N; i++) {
+                let z1 = baseZ1[i];
+                let z2 = baseZ2[i];
+                
+                let px = (l11 * z1) * scale;
+                let py = -(l21 * z1 + l22 * z2) * scale; // negative because canvas Y is down
+                
+                // Fast drawing
+                ctx.moveTo(px, py);
+                ctx.arc(px, py, 1.5, 0, Math.PI * 2);
+            }
+            ctx.fill();
+
+            // Draw 1-Sigma Covariance Ellipse
+            // We use the derived eigenvalues (lambda1, lambda2) for semi-major and semi-minor axes lengths
+            // and theta for the rotation of the ellipse relative to the current grid.
+            const semiMajor = Math.sqrt(lambda1) * scale;
+            const semiMinor = Math.sqrt(lambda2) * scale;
+            
+            ctx.save();
+            // Negative theta because canvas Y points down, standard math Y points up
+            ctx.rotate(-theta); 
+            
+            // Draw Principal Axes Guidelines
+            ctx.strokeStyle = 'rgba(244, 63, 94, 0.3)'; // Rose transparent
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(-semiMajor * 1.5, 0); ctx.lineTo(semiMajor * 1.5, 0);
+            ctx.moveTo(0, -semiMinor * 1.5); ctx.lineTo(0, semiMinor * 1.5);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Draw Ellipse Path
+            ctx.beginPath();
+            ctx.ellipse(0, 0, semiMajor, semiMinor, 0, 0, 2 * Math.PI);
+            
+            // Fill & Stroke
+            ctx.fillStyle = 'rgba(244, 63, 94, 0.15)'; // Rose fill
+            ctx.fill();
+            
+            ctx.strokeStyle = '#f43f5e'; // Rose solid edge
+            ctx.lineWidth = 3;
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = '#f43f5e';
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+
+            // Draw Eigenvectors arrows (Scaled by sqrt(lambda))
+            const headlen = 10;
+            
+            // V1 (Major)
+            ctx.strokeStyle = '#38bdf8'; // Sky blue
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(semiMajor, 0);
+            ctx.stroke();
+            ctx.beginPath(); // Arrowhead
+            ctx.moveTo(semiMajor, 0);
+            ctx.lineTo(semiMajor - headlen, -headlen/2);
+            ctx.lineTo(semiMajor - headlen, headlen/2);
+            ctx.fill();
+            
+            // V2 (Minor)
+            ctx.strokeStyle = '#a855f7'; // Purple
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(0, semiMinor);
+            ctx.stroke();
+            ctx.beginPath(); // Arrowhead
+            ctx.moveTo(0, semiMinor);
+            ctx.lineTo(-headlen/2, semiMinor - headlen);
+            ctx.lineTo(headlen/2, semiMinor - headlen);
+            ctx.fill();
+
+            ctx.restore(); // Restore Ellipse rotation
+            
+            ctx.restore(); // Restore Global Basis Rotation
+        }
+
+        // Sliders events
+        sliderSigX.addEventListener('input', updateMath);
+        sliderSigY.addEventListener('input', updateMath);
+        sliderRho.addEventListener('input', updateMath);
+
+        // Init
+        setTimeout(() => {
+            resizeCanvas();
+            updateMath();
+        }, 100);
+    </script>
+</body>
+</html>
