@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Frequentist vs. Bayesian — Two Views of Probability</title>
+<style>
+  :root{
+    --bg:#0a0d12;
+    --panel:#10151d;
+    --panel-2:#0d1219;
+    --grid:#1c2530;
+    --hairline:#232d3a;
+    --text:#e8eef2;
+    --muted:#7c8b99;
+    --freq-color:#3fd7ea;
+    --bayes-color:#ff4d94;
+    --mono: "JetBrains Mono","SFMono-Regular",Consolas,Menlo,monospace;
+    --sans: -apple-system,"Segoe UI",Inter,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{ margin:0; padding:0; background:var(--bg); color:var(--text); font-family:var(--sans); }
+  body{
+    display:flex; justify-content:center; padding:28px 16px; min-height:100vh;
+    background:
+      radial-gradient(ellipse at 50% -10%, #142031 0%, transparent 60%),
+      repeating-linear-gradient(0deg, rgba(255,255,255,0.012) 0px, rgba(255,255,255,0.012) 1px, transparent 1px, transparent 3px),
+      var(--bg);
+  }
+  .stage{ width:100%; max-width:1120px; }
+  .eyebrow{ font-family:var(--mono); font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin:0 0 6px; }
+  h1{ font-size:23px; font-weight:650; margin:0 0 6px; letter-spacing:-0.01em; }
+  .sub{ font-size:13.5px; color:var(--muted); margin:0 0 20px; max-width:78ch; line-height:1.55; }
+
+  .control-bar{
+    display:flex; flex-wrap:wrap; align-items:center; gap:18px;
+    background:var(--panel); border:1px solid var(--hairline); border-radius:10px;
+    padding:14px 18px; margin-bottom:20px;
+  }
+  .control-bar .grp{ display:flex; align-items:center; gap:10px; }
+  .control-bar label{ font-family:var(--mono); font-size:11px; color:var(--muted); letter-spacing:.03em; white-space:nowrap; }
+  .control-bar input[type="range"]{ width:150px; accent-color:#9fb0bd; }
+  .control-bar .pval{ font-family:var(--mono); font-size:13px; font-weight:600; min-width:38px; display:inline-block; }
+  .btn{
+    font-family:var(--mono); font-size:11.5px; letter-spacing:.03em;
+    background:var(--panel-2); color:var(--text); border:1px solid var(--hairline);
+    border-radius:7px; padding:8px 14px; cursor:pointer; transition:border-color .15s ease, color .15s ease;
+  }
+  .btn:hover{ border-color:#4a5b6c; }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .btn.primary{ border-color:var(--freq-color); color:var(--freq-color); }
+  .btn.reset{ margin-left:auto; }
+  .note{ font-family:var(--mono); font-size:10.5px; color:var(--muted); opacity:.8; }
+
+  .panels{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media (max-width:820px){ .panels{ grid-template-columns:1fr; } }
+
+  .panel{ background:var(--panel); border:1px solid var(--hairline); border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:14px; }
+  .panel-head .tag{ font-family:var(--mono); font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; }
+  .panel.freq .tag{ color:var(--freq-color); }
+  .panel.bayes .tag{ color:var(--bayes-color); }
+  .panel-head h2{ font-size:17px; margin:4px 0 4px; font-weight:650; }
+  .panel-head p{ font-size:12.5px; color:var(--muted); margin:0; line-height:1.5; }
+
+  .row-controls{ display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+  .row-controls .speed{ display:flex; align-items:center; gap:8px; margin-left:auto; }
+  .row-controls .speed label{ font-family:var(--mono); font-size:10.5px; color:var(--muted); }
+  .row-controls .speed input[type="range"]{ width:90px; accent-color:var(--freq-color); }
+
+  .stat-strip{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:8px;
+    background:var(--panel-2); border:1px solid var(--hairline); border-radius:8px; padding:10px 12px;
+  }
+  .stat-strip .bayes-stats{ grid-template-columns:repeat(3,1fr); }
+  .stat{ text-align:center; }
+  .stat .k{ font-family:var(--mono); font-size:9.5px; color:var(--muted); letter-spacing:.05em; text-transform:uppercase; }
+  .stat .v{ font-family:var(--mono); font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; margin-top:2px; }
+  .panel.freq .stat .v{ color:var(--freq-color); }
+  .panel.bayes .stat .v{ color:var(--bayes-color); }
+
+  canvas.chart{ width:100%; height:auto; display:block; border-radius:6px; background:var(--panel-2); border:1px solid var(--hairline); }
+
+  .tape{ display:flex; gap:3px; overflow:hidden; height:20px; align-items:center; }
+  .tape .chip{ width:9px; height:9px; border-radius:2px; flex:0 0 auto; }
+  .tape .chip.h{ background:var(--freq-color); }
+  .tape .chip.t{ background:#333f4c; }
+
+  .slider-row{ display:flex; align-items:center; gap:12px; }
+  .slider-row input[type="range"]{ flex:1; accent-color:var(--bayes-color); }
+  .slider-row .nval{ font-family:var(--mono); font-size:12.5px; min-width:70px; text-align:right; }
+
+  .formula{ font-family:var(--mono); font-size:10.5px; color:var(--muted); border-top:1px dashed var(--hairline); padding-top:10px; line-height:1.6; }
+  .formula b{ color:var(--text); font-weight:600; }
+
+  .footer-hint{ font-family:var(--mono); font-size:11px; color:var(--muted); text-align:center; margin-top:18px; opacity:.8; }
+
+  @media (prefers-reduced-motion: reduce){ .btn, canvas{ transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="stage">
+  <p class="eyebrow">Two Philosophies · One Simulated Experiment</p>
+  <h1>Frequentist vs. Bayesian: Interpreting Probability</h1>
+  <p class="sub">Both panels watch the same coin, flipped with a true underlying probability p. The left panel asks "what fraction of flips came up heads, in the long run?" The right panel asks "given what we've seen, how confident are we about p itself?" Same data, two different questions.</p>
+
+  <div class="control-bar">
+    <div class="grp">
+      <label for="pSlider">true p (heads)</label>
+      <input type="range" id="pSlider" min="0.05" max="0.95" step="0.01" value="0.5">
+      <span class="pval" id="pVal">0.50</span>
+    </div>
+    <span class="note" id="pNote">— editable before the first flip</span>
+    <button class="btn reset" id="resetBtn">↺ new experiment</button>
+  </div>
+
+  <div class="panels">
+    <!-- FREQUENTIST PANEL -->
+    <div class="panel freq">
+      <div class="panel-head">
+        <span class="tag">Frequentist</span>
+        <h2>Running Relative Frequency</h2>
+        <p>Law of Large Numbers: as n grows, (heads ⁄ n) settles toward the true p — shown as the dashed line.</p>
+      </div>
+
+      <div class="row-controls">
+        <button class="btn primary" id="flipOnceBtn">flip once</button>
+        <button class="btn primary" id="autoBtn">▶ auto-flip</button>
+        <div class="speed">
+          <label>speed</label>
+          <input type="range" id="speedSlider" min="1" max="60" value="12">
+        </div>
+      </div>
+
+      <div class="stat-strip">
+        <div class="stat"><div class="k">trials (n)</div><div class="v" id="freqN">0</div></div>
+        <div class="stat"><div class="k">heads (k)</div><div class="v" id="freqK">0</div></div>
+        <div class="stat"><div class="k">freq k/n</div><div class="v" id="freqVal">—</div></div>
+        <div class="stat"><div class="k">true p</div><div class="v" id="freqTrueP">0.50</div></div>
+      </div>
+
+      <canvas class="chart" id="freqChart" width="640" height="280"></canvas>
+      <div class="tape" id="tape"></div>
+
+      <p class="formula">running frequency = <b>k / n</b> &nbsp;→&nbsp; converges to <b>p</b> as n → ∞ (no claim about belief — just what happened, on average, over many repeats)</p>
+    </div>
+
+    <!-- BAYESIAN PANEL -->
+    <div class="panel bayes">
+      <div class="panel-head">
+        <span class="tag">Bayesian</span>
+        <h2>Posterior Belief Density</h2>
+        <p>Starting from a flat Beta(1,1) prior, each observation updates belief about p itself — the curve sharpens as evidence accumulates.</p>
+      </div>
+
+      <div class="slider-row">
+        <label for="nSlider" style="font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;">observations used</label>
+        <input type="range" id="nSlider" min="0" max="0" value="0" disabled>
+        <span class="nval" id="nSliderVal">n = 0</span>
+      </div>
+
+      <div class="stat-strip bayes-stats">
+        <div class="stat"><div class="k">α · β</div><div class="v" id="bayesAB">1 · 1</div></div>
+        <div class="stat"><div class="k">mean</div><div class="v" id="bayesMean">0.500</div></div>
+        <div class="stat"><div class="k">95% interval</div><div class="v" id="bayesCI">[0.03, 0.97]</div></div>
+      </div>
+
+      <canvas class="chart" id="bayesChart" width="640" height="280"></canvas>
+
+      <p class="formula">posterior ∝ <b>p<sup>α−1</sup>(1−p)<sup>β−1</sup></b>, with α = 1+heads, β = 1+tails &nbsp;·&nbsp; dashed line = flat prior &nbsp;·&nbsp; shaded band = 95% credible interval</p>
+    </div>
+  </div>
+
+  <p class="footer-hint">drag the slider on the right to replay how belief evolved over the course of the run on the left</p>
+</div>
+
+<script>
+(function(){
+  // ---------- shared state ----------
+  let trueP = 0.5;
+  let flips = [];          // 0/1 sequence
+  let cumHeads = [0];      // cumHeads[i] = number of heads among first i flips
+  let autoTimer = null;
+  let userPulledSliderBack = false;
+
+  const pSlider = document.getElementById('pSlider');
+  const pVal = document.getElementById('pVal');
+  const pNote = document.getElementById('pNote');
+  const resetBtn = document.getElementById('resetBtn');
+
+  const flipOnceBtn = document.getElementById('flipOnceBtn');
+  const autoBtn = document.getElementById('autoBtn');
+  const speedSlider = document.getElementById('speedSlider');
+  const freqN = document.getElementById('freqN');
+  const freqK = document.getElementById('freqK');
+  const freqVal = document.getElementById('freqVal');
+  const freqTrueP = document.getElementById('freqTrueP');
+  const freqChart = document.getElementById('freqChart');
+  const tape = document.getElementById('tape');
+
+  const nSlider = document.getElementById('nSlider');
+  const nSliderVal = document.getElementById('nSliderVal');
+  const bayesAB = document.getElementById('bayesAB');
+  const bayesMean = document.getElementById('bayesMean');
+  const bayesCI = document.getElementById('bayesCI');
+  const bayesChart = document.getElementById('bayesChart');
+
+  // ---------- lgamma (Lanczos approximation) ----------
+  const G = 7;
+  const LANCZOS = [
+    0.99999999999980993, 676.5203681218851, -1259.1392167224028,
+    771.32342877765313, -176.61502916214059, 12.507343278686905,
+    -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7
+  ];
+  function lgamma(x){
+    if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - lgamma(1 - x);
+    x -= 1;
+    let a = LANCZOS[0];
+    const t = x + G + 0.5;
+    for (let i = 1; i < G + 2; i++) a += LANCZOS[i] / (x + i);
+    return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(a);
+  }
+  function logBeta(a, b){ return lgamma(a) + lgamma(b) - lgamma(a + b); }
+
+  // ---------- generic canvas helpers ----------
+  function clearCanvas(canvas){
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue('--panel-2').trim() || '#0d1219';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    return ctx;
+  }
+  function drawGrid(ctx, w, h, pad){
+    ctx.strokeStyle = '#1c2530';
+    ctx.lineWidth = 1;
+    for (let i = 0; i <= 4; i++){
+      const y = pad.top + (h - pad.top - pad.bottom) * (i / 4);
+      ctx.beginPath(); ctx.moveTo(pad.left, y); ctx.lineTo(w - pad.right, y); ctx.stroke();
+    }
+  }
+
+  // ---------- frequentist chart ----------
+  function drawFreqChart(){
+    const canvas = freqChart;
+    const w = canvas.width, h = canvas.height;
+    const pad = { top: 14, right: 16, bottom: 22, left: 40 };
+    const ctx = clearCanvas(canvas);
+    drawGrid(ctx, w, h, pad);
+
+    const plotW = w - pad.left - pad.right;
+    const plotH = h - pad.top - pad.bottom;
+
+    // y-axis labels 0, .5, 1
+    ctx.fillStyle = '#7c8b99';
+    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.textAlign = 'right';
+    [0, 0.5, 1].forEach(v=>{
+      const y = pad.top + plotH * (1 - v);
+      ctx.fillText(v.toFixed(1), pad.left - 6, y + 3);
+    });
+
+    // true-p dashed reference line
+    const yTrue = pad.top + plotH * (1 - trueP);
+    ctx.strokeStyle = '#e8eef2';
+    ctx.globalAlpha = 0.55;
+    ctx.setLineDash([5, 5]);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath(); ctx.moveTo(pad.left, yTrue); ctx.lineTo(w - pad.right, yTrue); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    const n = flips.length;
+    if (n === 0){
+      ctx.fillStyle = '#7c8b99';
+      ctx.font = '11px "JetBrains Mono", monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText('flip to begin', pad.left + plotW / 2, pad.top + plotH / 2);
+      return;
+    }
+
+    ctx.strokeStyle = '#3fd7ea';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 1; i <= n; i++){
+      const freq = cumHeads[i] / i;
+      const x = pad.left + plotW * ((i - 1) / Math.max(1, n - 1));
+      const y = pad.top + plotH * (1 - freq);
+      if (i === 1) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // final point marker
+    const lastFreq = cumHeads[n] / n;
+    const lx = w - pad.right, ly = pad.top + plotH * (1 - lastFreq);
+    ctx.fillStyle = '#3fd7ea';
+    ctx.beginPath(); ctx.arc(lx, ly, 3.5, 0, Math.PI * 2); ctx.fill();
+  }
+
+  function refreshTape(){
+    const last = flips.slice(-40);
+    tape.innerHTML = last.map(v => `<div class="chip ${v ? 'h' : 't'}"></div>`).join('');
+  }
+
+  // ---------- bayesian chart ----------
+  const GRID_N = 260;
+  function drawBayesChart(nUsed){
+    const canvas = bayesChart;
+    const w = canvas.width, h = canvas.height;
+    const pad = { top: 14, right: 16, bottom: 22, left: 40 };
+    const ctx = clearCanvas(canvas);
+
+    const heads = cumHeads[nUsed];
+    const tails = nUsed - heads;
+    const a = 1 + heads, b = 1 + tails;
+
+    // discretized pdf over open interval (0,1)
+    const xs = new Array(GRID_N);
+    const ys = new Array(GRID_N);
+    const logB = logBeta(a, b);
+    let maxY = 0;
+    for (let i = 0; i < GRID_N; i++){
+      const x = (i + 0.5) / GRID_N;
+      const logpdf = (a - 1) * Math.log(x) + (b - 1) * Math.log(1 - x) - logB;
+      const y = Math.exp(logpdf);
+      xs[i] = x; ys[i] = y;
+      if (y > maxY) maxY = y;
+    }
+
+    // normalize via trapezoid + cumulative for credible interval
+    const dx = 1 / GRID_N;
+    let integral = 0;
+    const cum = new Array(GRID_N);
+    for (let i = 0; i < GRID_N; i++){ integral += ys[i] * dx; cum[i] = integral; }
+    let loX = 0, hiX = 1;
+    for (let i = 0; i < GRID_N; i++){
+      if (cum[i] / integral >= 0.025) { loX = xs[i]; break; }
+    }
+    for (let i = GRID_N - 1; i >= 0; i--){
+      if (cum[i] / integral <= 0.975) { hiX = xs[i]; break; }
+    }
+
+    const yMax = maxY * 1.15;
+    const plotW = w - pad.left - pad.right;
+    const plotH = h - pad.top - pad.bottom;
+    const X = (x) => pad.left + plotW * x;
+    const Y = (y) => pad.top + plotH * (1 - Math.min(1, y / yMax));
+
+    drawGrid(ctx, w, h, pad);
+
+    // x-axis labels
+    ctx.fillStyle = '#7c8b99';
+    ctx.font = '10px "JetBrains Mono", monospace';
+    ctx.textAlign = 'center';
+    [0, 0.5, 1].forEach(v=>{ ctx.fillText(v.toFixed(1), X(v), h - 6); });
+
+    // credible interval shading
+    ctx.fillStyle = 'rgba(255, 77, 148, 0.14)';
+    ctx.beginPath();
+    ctx.moveTo(X(loX), pad.top + plotH);
+    for (let i = 0; i < GRID_N; i++){
+      if (xs[i] < loX || xs[i] > hiX) continue;
+      ctx.lineTo(X(xs[i]), Y(ys[i]));
+    }
+    ctx.lineTo(X(hiX), pad.top + plotH);
+    ctx.closePath();
+    ctx.fill();
+
+    // flat prior reference (Beta(1,1) pdf = 1 everywhere)
+    ctx.strokeStyle = '#e8eef2';
+    ctx.globalAlpha = 0.4;
+    ctx.setLineDash([5, 5]);
+    ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(pad.left, Y(1)); ctx.lineTo(w - pad.right, Y(1)); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // true-p vertical reference
+    ctx.strokeStyle = '#3fd7ea';
+    ctx.globalAlpha = 0.55;
+    ctx.setLineDash([4, 4]);
+    ctx.beginPath(); ctx.moveTo(X(trueP), pad.top); ctx.lineTo(X(trueP), pad.top + plotH); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+
+    // posterior curve
+    ctx.strokeStyle = '#ff4d94';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    for (let i = 0; i < GRID_N; i++){
+      const px = X(xs[i]), py = Y(ys[i]);
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.stroke();
+
+    // stats readout
+    bayesAB.textContent = `${a} · ${b}`;
+    bayesMean.textContent = (a / (a + b)).toFixed(3);
+    bayesCI.textContent = `[${loX.toFixed(2)}, ${hiX.toFixed(2)}]`;
+  }
+
+  // ---------- orchestration ----------
+  function refreshAll(){
+    drawFreqChart();
+    refreshTape();
+
+    const n = flips.length;
+    nSlider.max = n;
+    nSlider.disabled = n === 0;
+    if (!userPulledSliderBack || Number(nSlider.value) > n) {
+      nSlider.value = n;
+    }
+    const nUsed = Number(nSlider.value);
+    nSliderVal.textContent = `n = ${nUsed}`;
+    drawBayesChart(nUsed);
+
+    freqN.textContent = n;
+    const k = cumHeads[n];
+    freqK.textContent = k;
+    freqVal.textContent = n > 0 ? (k / n).toFixed(3) : '—';
+    freqTrueP.textContent = trueP.toFixed(2);
+
+    pSlider.disabled = n > 0;
+    pNote.textContent = n > 0 ? '— reset to change' : '— editable before the first flip';
+  }
+
+  function doFlip(){
+    const outcome = Math.random() < trueP ? 1 : 0;
+    flips.push(outcome);
+    cumHeads.push(cumHeads[cumHeads.length - 1] + outcome);
+    refreshAll();
+  }
+
+  function stopAuto(){
+    if (autoTimer){ clearInterval(autoTimer); autoTimer = null; }
+    autoBtn.textContent = '▶ auto-flip';
+  }
+  function startAuto(){
+    stopAuto();
+    const rate = Number(speedSlider.value);
+    autoTimer = setInterval(doFlip, Math.max(16, 1000 / rate));
+    autoBtn.textContent = '⏸ pause';
+  }
+
+  function resetExperiment(){
+    stopAuto();
+    flips = [];
+    cumHeads = [0];
+    userPulledSliderBack = false;
+    nSlider.value = 0;
+    refreshAll();
+  }
+
+  // ---------- wiring ----------
+  pSlider.addEventListener('input', () => {
+    trueP = Number(pSlider.value);
+    pVal.textContent = trueP.toFixed(2);
+    if (flips.length === 0) refreshAll();
+  });
+
+  flipOnceBtn.addEventListener('click', doFlip);
+  autoBtn.addEventListener('click', () => { autoTimer ? stopAuto() : startAuto(); });
+  speedSlider.addEventListener('input', () => { if (autoTimer) startAuto(); });
+  resetBtn.addEventListener('click', resetExperiment);
+
+  nSlider.addEventListener('input', () => {
+    userPulledSliderBack = Number(nSlider.value) < flips.length;
+    nSliderVal.textContent = `n = ${nSlider.value}`;
+    drawBayesChart(Number(nSlider.value));
+  });
+
+  pVal.textContent = trueP.toFixed(2);
+  refreshAll();
+})();
+</script>
+</body>
+</html>
