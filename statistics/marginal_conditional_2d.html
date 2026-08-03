@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D Marginal & Conditional Projections</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- MathJax -->
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: #080c14;
+            color: #f3f4f6;
+            overflow-x: hidden;
+        }
+        .font-mono-numbers { font-family: 'JetBrains Mono', monospace; }
+        .glass-panel {
+            background: rgba(22, 30, 49, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        /* Custom range slider styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px; width: 16px; border-radius: 50%;
+            background: #ffffff; cursor: pointer; margin-top: -6px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%; height: 4px; cursor: pointer;
+            background: #1e293b; border-radius: 2px;
+        }
+        input[type=range]:focus { outline: none; }
+        
+        .active-btn {
+            background-color: #3b82f6; /* blue-500 */
+            border-color: #60a5fa;
+            color: white;
+        }
+        .inactive-btn {
+            background-color: #1e293b;
+            border-color: #334155;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body class="min-h-screen py-8 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <header class="glass-panel p-6 rounded-3xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6 shadow-xl relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500"></div>
+            <div>
+                <div class="flex items-center gap-3">
+                    <span class="px-2.5 py-1 text-xs font-semibold uppercase tracking-wider rounded bg-blue-950 text-blue-400 border border-blue-800">Multivariate Analysis</span>
+                </div>
+                <h1 class="text-3xl font-bold tracking-tight text-white mt-2">Marginal & Conditional Projections</h1>
+                <p class="text-gray-400 mt-1 max-w-2xl">
+                    Explore a 2D probability density function \( f(x,y) \). The outer histograms show the marginal probabilities \( f(x) \) and \( f(y) \). Drag the band to extract a 1D conditional slice \( f(y|x) \) or \( f(x|y) \).
+                </p>
+            </div>
+            
+            <div class="flex flex-col gap-3 min-w-[200px]">
+                <label class="text-xs font-bold text-purple-400 uppercase tracking-wide">Correlation (\( \rho \))</label>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-mono-numbers text-gray-400">-1</span>
+                    <input type="range" id="sliderRho" min="-0.95" max="0.95" step="0.05" value="0.7" class="w-full h-1.5 rounded-lg accent-purple-500">
+                    <span class="text-sm font-mono-numbers text-gray-400">1</span>
+                </div>
+                <div class="text-right text-sm font-mono-numbers font-bold text-white" id="valRho">0.70</div>
+            </div>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- Left Side: Interactive 2D Plot & Marginals -->
+            <section class="lg:col-span-7 space-y-6">
+                <div class="glass-panel p-6 rounded-3xl shadow-xl flex flex-col items-center">
+                    
+                    <div class="w-full flex justify-between items-center mb-4">
+                        <h2 class="text-xl font-bold text-white">Scatter & Marginals</h2>
+                        
+                        <div class="flex gap-2">
+                            <button id="btnSliceX" class="active-btn px-4 py-1.5 rounded-lg text-sm font-semibold border transition">Slice X (Vertical)</button>
+                            <button id="btnSliceY" class="inactive-btn px-4 py-1.5 rounded-lg text-sm font-semibold border transition">Slice Y (Horizontal)</button>
+                        </div>
+                    </div>
+
+                    <!-- Composite Layout for Plot + Histograms -->
+                    <div class="relative grid" style="grid-template-columns: 1fr 100px; grid-template-rows: 100px 1fr; width: 100%; max-width: 600px; aspect-ratio: 1/1; gap: 8px;">
+                        
+                        <!-- Top Marginal (X) -->
+                        <div class="relative w-full h-full bg-slate-900/50 rounded-t-xl border-t border-l border-r border-slate-700/50" style="grid-column: 1 / 2; grid-row: 1 / 2;">
+                            <canvas id="canvasTop" class="w-full h-full absolute top-0 left-0"></canvas>
+                        </div>
+                        
+                        <!-- Empty Top Right -->
+                        <div style="grid-column: 2 / 3; grid-row: 1 / 2;"></div>
+                        
+                        <!-- Center Scatter Plot -->
+                        <div class="relative w-full h-full bg-[#030712] rounded-bl-xl border border-slate-700 overflow-hidden touch-none" style="grid-column: 1 / 2; grid-row: 2 / 3;">
+                            <canvas id="canvasScatter" class="w-full h-full absolute top-0 left-0"></canvas>
+                        </div>
+                        
+                        <!-- Right Marginal (Y) -->
+                        <div class="relative w-full h-full bg-slate-900/50 rounded-r-xl border-t border-r border-b border-slate-700/50" style="grid-column: 2 / 3; grid-row: 2 / 3;">
+                            <canvas id="canvasRight" class="w-full h-full absolute top-0 left-0"></canvas>
+                        </div>
+
+                    </div>
+                    
+                    <!-- Axis Labels -->
+                    <div class="w-full max-w-[600px] mt-2 flex justify-between px-4 text-xs font-bold text-gray-500 uppercase tracking-widest">
+                        <span>Variable X (\( \eta \))</span>
+                    </div>
+
+                </div>
+            </section>
+
+            <!-- Right Side: Conditional Projection Dashboard -->
+            <section class="lg:col-span-5 space-y-6">
+                
+                <div class="glass-panel p-6 rounded-3xl shadow-xl space-y-4 h-full flex flex-col">
+                    <h2 class="text-lg font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+                        <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                        </svg>
+                        Conditional Projection
+                    </h2>
+                    
+                    <div class="bg-slate-900/50 p-4 rounded-xl border border-slate-800 text-center shadow-inner">
+                        <div class="text-[11px] text-gray-400 font-medium mb-2 uppercase tracking-wide" id="lblCondEq">Conditional Density Equation</div>
+                        <div class="text-lg" id="mathCond">
+                            \( f(y|X \in \text{slice}) = \frac{f(x,y)}{f(x)} \)
+                        </div>
+                    </div>
+
+                    <div class="flex-grow min-h-[300px] bg-[#030712] p-4 rounded-2xl border border-slate-800 mt-4 relative">
+                        <canvas id="chartCond"></canvas>
+                        <div id="noDataWarning" class="absolute inset-0 flex items-center justify-center text-sm font-medium text-gray-500 hidden">
+                            Not enough points in selection slice.
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4 mt-4">
+                        <div class="bg-blue-950/20 p-3 rounded-xl border border-blue-900/30 text-center">
+                            <div class="text-[10px] font-bold text-blue-400 uppercase mb-1">Slice Center</div>
+                            <div class="text-lg font-mono-numbers font-bold text-white" id="valSliceCenter">0.00</div>
+                        </div>
+                        <div class="bg-purple-950/20 p-3 rounded-xl border border-purple-900/30 text-center">
+                            <div class="text-[10px] font-bold text-purple-400 uppercase mb-1">Points in Slice</div>
+                            <div class="text-lg font-mono-numbers font-bold text-white" id="valSliceCount">0</div>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </main>
+    </div>
+
+    <!-- MAIN JAVASCRIPT LOGIC -->
+    <script>
+        // Constants & Data
+        const N = 5000;
+        let data = [];
+        let rho = 0.7; // Correlation
+        const domainMin = -4;
+        const domainMax = 4;
+        const numBins = 40;
+        const binWidth = (domainMax - domainMin) / numBins;
+
+        // Slice State
+        let sliceMode = 'X'; // 'X' for vertical band slicing X axis, 'Y' for horizontal
+        let sliceCenter = 0.0;
+        let sliceWidth = 0.8; // Band width
+        let isDragging = false;
+
+        // UI Elements
+        const sliderRho = document.getElementById('sliderRho');
+        const valRho = document.getElementById('valRho');
+        const btnSliceX = document.getElementById('btnSliceX');
+        const btnSliceY = document.getElementById('btnSliceY');
+        
+        const mathCond = document.getElementById('mathCond');
+        const valSliceCenter = document.getElementById('valSliceCenter');
+        const valSliceCount = document.getElementById('valSliceCount');
+        const noDataWarning = document.getElementById('noDataWarning');
+
+        // Canvases
+        const cTop = document.getElementById('canvasTop');
+        const cRight = document.getElementById('canvasRight');
+        const cScat = document.getElementById('canvasScatter');
+        const ctxTop = cTop.getContext('2d');
+        const ctxRight = cRight.getContext('2d');
+        const ctxScat = cScat.getContext('2d');
+
+        // Chart.js for Conditional
+        const ctxChart = document.getElementById('chartCond').getContext('2d');
+        let condChart = new Chart(ctxChart, {
+            type: 'bar',
+            data: {
+                labels: Array.from({length: numBins}, (_, i) => (domainMin + (i+0.5)*binWidth).toFixed(1)),
+                datasets: [{
+                    label: 'Conditional Density',
+                    data: [],
+                    backgroundColor: 'rgba(236, 72, 153, 0.7)', // pink-500
+                    borderColor: 'rgba(236, 72, 153, 1)',
+                    borderWidth: 1,
+                    barPercentage: 1.0,
+                    categoryPercentage: 1.0
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 150 }, // fast animation for dragging
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    x: { 
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        ticks: { color: '#94a3b8', maxTicksLimit: 8 }
+                    },
+                    y: { 
+                        grid: { color: 'rgba(255,255,255,0.1)' },
+                        ticks: { color: '#94a3b8' },
+                        suggestedMax: 0.5 // keeps y-axis reasonably stable
+                    }
+                }
+            }
+        });
+
+        // Setup sizes
+        function resizeCanvases() {
+            const dpr = window.devicePixelRatio || 1;
+            const canvases = [cTop, cRight, cScat];
+            canvases.forEach(c => {
+                const rect = c.parentElement.getBoundingClientRect();
+                c.width = rect.width * dpr;
+                c.height = rect.height * dpr;
+                const ctx = c.getContext('2d');
+                ctx.scale(dpr, dpr);
+            });
+            drawAll();
+        }
+        window.addEventListener('resize', resizeCanvases);
+
+        // Math: Generate bivariate normal data
+        function randn_bm() {
+            let u = 0, v = 0;
+            while(u === 0) u = Math.random();
+            while(v === 0) v = Math.random();
+            return Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        }
+
+        function generateData() {
+            data = [];
+            for (let i = 0; i < N; i++) {
+                let x = randn_bm();
+                let z = randn_bm();
+                // Bivariate transform
+                let y = rho * x + Math.sqrt(1 - rho * rho) * z;
+                data.push({x: x, y: y});
+            }
+            drawAll();
+        }
+
+        // Coordinate transforms for scatter plot
+        function toPxX(val, width) { return ((val - domainMin) / (domainMax - domainMin)) * width; }
+        function toPxY(val, height) { return height - ((val - domainMin) / (domainMax - domainMin)) * height; }
+        function fromPxX(px, width) { return (px / width) * (domainMax - domainMin) + domainMin; }
+        function fromPxY(py, height) { return domainMax - (py / height) * (domainMax - domainMin); }
+
+        // Draw everything
+        function drawAll() {
+            const wS = cScat.width / (window.devicePixelRatio || 1);
+            const hS = cScat.height / (window.devicePixelRatio || 1);
+            const wT = cTop.width / (window.devicePixelRatio || 1);
+            const hT = cTop.height / (window.devicePixelRatio || 1);
+            const wR = cRight.width / (window.devicePixelRatio || 1);
+            const hR = cRight.height / (window.devicePixelRatio || 1);
+
+            // 1. Draw Scatter Plot
+            ctxScat.clearRect(0, 0, wS, hS);
+            
+            // Grid
+            ctxScat.strokeStyle = '#1e293b'; ctxScat.lineWidth = 1;
+            ctxScat.beginPath();
+            ctxScat.moveTo(toPxX(0, wS), 0); ctxScat.lineTo(toPxX(0, wS), hS);
+            ctxScat.moveTo(0, toPxY(0, hS)); ctxScat.lineTo(wS, toPxY(0, hS));
+            ctxScat.stroke();
+
+            // Points
+            ctxScat.fillStyle = 'rgba(56, 189, 248, 0.4)'; // light blue
+            
+            // Collect Marginal and Conditional histograms simultaneously to save CPU
+            let histX = new Array(numBins).fill(0);
+            let histY = new Array(numBins).fill(0);
+            let histCond = new Array(numBins).fill(0);
+            let pointsInSlice = 0;
+
+            const halfWidth = sliceWidth / 2;
+            const minBound = sliceCenter - halfWidth;
+            const maxBound = sliceCenter + halfWidth;
+
+            for (let i = 0; i < N; i++) {
+                const pt = data[i];
+                
+                // Marginals
+                if (pt.x >= domainMin && pt.x < domainMax) {
+                    histX[Math.floor((pt.x - domainMin) / binWidth)]++;
+                }
+                if (pt.y >= domainMin && pt.y < domainMax) {
+                    histY[Math.floor((pt.y - domainMin) / binWidth)]++;
+                }
+
+                // Check if in slice
+                let inSlice = false;
+                if (sliceMode === 'X' && pt.x >= minBound && pt.x <= maxBound) {
+                    inSlice = true;
+                    if (pt.y >= domainMin && pt.y < domainMax) {
+                        histCond[Math.floor((pt.y - domainMin) / binWidth)]++;
+                        pointsInSlice++;
+                    }
+                } else if (sliceMode === 'Y' && pt.y >= minBound && pt.y <= maxBound) {
+                    inSlice = true;
+                    if (pt.x >= domainMin && pt.x < domainMax) {
+                        histCond[Math.floor((pt.x - domainMin) / binWidth)]++;
+                        pointsInSlice++;
+                    }
+                }
+
+                // Draw point
+                let px = toPxX(pt.x, wS);
+                let py = toPxY(pt.y, hS);
+                
+                if (inSlice) {
+                    ctxScat.fillStyle = 'rgba(236, 72, 153, 0.8)'; // pink highlighted
+                } else {
+                    ctxScat.fillStyle = 'rgba(56, 189, 248, 0.2)'; // dimmed blue
+                }
+                
+                ctxScat.beginPath();
+                ctxScat.arc(px, py, 2, 0, Math.PI*2);
+                ctxScat.fill();
+            }
+
+            // Draw Slice Band Overlay
+            ctxScat.fillStyle = 'rgba(236, 72, 153, 0.15)'; // transparent pink
+            ctxScat.strokeStyle = 'rgba(236, 72, 153, 0.8)';
+            ctxScat.lineWidth = 2;
+            
+            if (sliceMode === 'X') {
+                let p1 = toPxX(minBound, wS);
+                let p2 = toPxX(maxBound, wS);
+                ctxScat.fillRect(p1, 0, p2 - p1, hS);
+                ctxScat.beginPath(); ctxScat.moveTo(p1, 0); ctxScat.lineTo(p1, hS); ctxScat.stroke();
+                ctxScat.beginPath(); ctxScat.moveTo(p2, 0); ctxScat.lineTo(p2, hS); ctxScat.stroke();
+            } else {
+                let p1 = toPxY(maxBound, hS); // maxBound is higher Y (lower pixel)
+                let p2 = toPxY(minBound, hS);
+                ctxScat.fillRect(0, p1, wS, p2 - p1);
+                ctxScat.beginPath(); ctxScat.moveTo(0, p1); ctxScat.lineTo(wS, p1); ctxScat.stroke();
+                ctxScat.beginPath(); ctxScat.moveTo(0, p2); ctxScat.lineTo(wS, p2); ctxScat.stroke();
+            }
+
+            // 2. Draw Top Marginal (X)
+            ctxTop.clearRect(0, 0, wT, hT);
+            ctxTop.fillStyle = 'rgba(56, 189, 248, 0.6)'; // Blue
+            let maxCountX = Math.max(...histX);
+            for(let i=0; i<numBins; i++) {
+                let barH = (histX[i] / maxCountX) * hT;
+                let barW = wT / numBins;
+                let px = i * barW;
+                ctxTop.fillRect(px, hT - barH, barW - 1, barH);
+            }
+
+            // 3. Draw Right Marginal (Y)
+            ctxRight.clearRect(0, 0, wR, hR);
+            ctxRight.fillStyle = 'rgba(168, 85, 247, 0.6)'; // Purple
+            let maxCountY = Math.max(...histY);
+            for(let i=0; i<numBins; i++) {
+                let barW = (histY[i] / maxCountY) * wR;
+                let barH = hR / numBins;
+                // Note: y=0 in canvas is top, so we reverse the index to match scatter y-axis which points up
+                let py = hR - (i + 1) * barH; 
+                ctxRight.fillRect(0, py, barW, barH - 1);
+            }
+
+            // 4. Update Conditional Chart
+            if (pointsInSlice > 10) {
+                noDataWarning.classList.add('hidden');
+                // Normalize to density
+                let condDensity = histCond.map(count => count / (pointsInSlice * binWidth));
+                condChart.data.datasets[0].data = condDensity;
+                condChart.data.datasets[0].label = sliceMode === 'X' ? 'f(y | x)' : 'f(x | y)';
+                condChart.update();
+            } else {
+                noDataWarning.classList.remove('hidden');
+                condChart.data.datasets[0].data = Array(numBins).fill(0);
+                condChart.update();
+            }
+
+            // Update UI
+            valSliceCenter.innerText = sliceCenter.toFixed(2);
+            valSliceCount.innerText = pointsInSlice.toLocaleString();
+            
+            // Format MathJax dynamic strings manually (since MathJax typesetting is slow, we just change the raw text in simple spans)
+            if (sliceMode === 'X') {
+                mathCond.innerHTML = `\\( f(y|x) \\approx \\text{Distribution of Y for } x \\in [${minBound.toFixed(2)}, ${maxBound.toFixed(2)}] \\)`;
+            } else {
+                mathCond.innerHTML = `\\( f(x|y) \\approx \\text{Distribution of X for } y \\in [${minBound.toFixed(2)}, ${maxBound.toFixed(2)}] \\)`;
+            }
+            if (window.MathJax) {
+                MathJax.typesetPromise([mathCond]);
+            }
+        }
+
+        // Pointer Events for dragging the slice
+        function onPointerDown(e) {
+            isDragging = true;
+            onPointerMove(e);
+            cScat.style.cursor = sliceMode === 'X' ? 'ew-resize' : 'ns-resize';
+            document.addEventListener('mousemove', onPointerMove);
+            document.addEventListener('mouseup', onPointerUp);
+            document.addEventListener('touchmove', onPointerMove, {passive: false});
+            document.addEventListener('touchend', onPointerUp);
+        }
+
+        function onPointerMove(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            
+            const rect = cScat.getBoundingClientRect();
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            }
+            
+            let wS = rect.width;
+            let hS = rect.height;
+            let px = clientX - rect.left;
+            let py = clientY - rect.top;
+
+            if (sliceMode === 'X') {
+                let x = fromPxX(px, wS);
+                sliceCenter = Math.max(domainMin + sliceWidth/2, Math.min(domainMax - sliceWidth/2, x));
+            } else {
+                let y = fromPxY(py, hS);
+                sliceCenter = Math.max(domainMin + sliceWidth/2, Math.min(domainMax - sliceWidth/2, y));
+            }
+            drawAll();
+        }
+
+        function onPointerUp() {
+            isDragging = false;
+            cScat.style.cursor = 'crosshair';
+            document.removeEventListener('mousemove', onPointerMove);
+            document.removeEventListener('mouseup', onPointerUp);
+            document.removeEventListener('touchmove', onPointerMove);
+            document.removeEventListener('touchend', onPointerUp);
+        }
+
+        cScat.addEventListener('mousedown', onPointerDown);
+        cScat.addEventListener('touchstart', onPointerDown, {passive: false});
+        cScat.style.cursor = 'crosshair';
+
+        // UI Listeners
+        sliderRho.addEventListener('input', () => {
+            rho = parseFloat(sliderRho.value);
+            valRho.innerText = rho.toFixed(2);
+            generateData();
+        });
+
+        btnSliceX.addEventListener('click', () => {
+            sliceMode = 'X';
+            btnSliceX.className = "active-btn px-4 py-1.5 rounded-lg text-sm font-semibold border transition";
+            btnSliceY.className = "inactive-btn px-4 py-1.5 rounded-lg text-sm font-semibold border transition";
+            condChart.options.scales.x.title = {display: true, text: 'y value', color: '#94a3b8'};
+            drawAll();
+        });
+
+        btnSliceY.addEventListener('click', () => {
+            sliceMode = 'Y';
+            btnSliceY.className = "active-btn px-4 py-1.5 rounded-lg text-sm font-semibold border transition";
+            btnSliceX.className = "inactive-btn px-4 py-1.5 rounded-lg text-sm font-semibold border transition";
+            condChart.options.scales.x.title = {display: true, text: 'x value', color: '#94a3b8'};
+            drawAll();
+        });
+
+        // Init
+        setTimeout(() => {
+            resizeCanvases();
+            condChart.options.scales.x.title = {display: true, text: 'y value', color: '#94a3b8'};
+            generateData();
+        }, 100);
+    </script>
+</body>
+</html>
